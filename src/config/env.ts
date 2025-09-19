@@ -1,12 +1,27 @@
-import mongoose from "mongoose";
-import { ENV } from "./env";
+import dotenv from "dotenv";
 
-export const connectDB = async (): Promise<void> => {
-  try {
-    await mongoose.connect(ENV.MONGO_URI);
-    console.log("MongoDB connected successfully");
-  } catch (error) {
-    console.error("MongoDB connection error:", error);
-    process.exit(1);
+dotenv.config();
+
+interface Env {
+  NODE_ENV: "development" | "production" | "test";
+  PORT: number;
+  MONGO_URI: string;
+  CLIENT_URL: string;
+}
+
+const getEnv = (key: keyof Env, defaultValue?: string): string => {
+  const value = process.env[key];
+  if (!value && !defaultValue) {
+    throw new Error(`Missing environment variable: ${key}`);
   }
+  return value || defaultValue!;
+};
+
+export const ENV: Env = {
+  NODE_ENV:
+    (process.env.NODE_ENV as "development" | "production" | "test") ||
+    "development",
+  PORT: Number(getEnv("PORT", "5000")),
+  MONGO_URI: getEnv("MONGO_URI"),
+  CLIENT_URL: getEnv("CLIENT_URL", "http://localhost:3000"),
 };
