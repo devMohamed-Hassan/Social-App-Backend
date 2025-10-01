@@ -4,6 +4,7 @@ import { SignupDTO } from "./auth.dto";
 import { HydratedDocument } from "mongoose";
 import { AppError } from "../../utils/AppError";
 import { UserRepository } from "../../repositories/user.repository";
+import { Bcrypt } from "../../utils/hash";
 
 interface IAuthServices {
   signup(req: Request, res: Response, next: NextFunction): Promise<Response>;
@@ -19,7 +20,7 @@ export class AuthServices implements IAuthServices {
     res: Response,
     next: NextFunction
   ): Promise<Response> {
-    const { firstName, lastName, email, age, phone, password }: SignupDTO =
+    let { firstName, lastName, email, age, phone, password }: SignupDTO =
       req.body;
 
     const isExist = await this.userModel.findOne({ email });
@@ -27,11 +28,13 @@ export class AuthServices implements IAuthServices {
     if (isExist) {
       throw new AppError("User already exists", 400);
     }
+    password = await Bcrypt.hashPassword(password);
     const user: HydratedDocument<IUser> = await this.userModel.create({
       firstName,
       lastName,
       email,
       age,
+      phone,
       password,
     });
 
