@@ -6,3 +6,8 @@ export interface SignupDTO {
   age: number;
   phone: string;
 }
+
+export interface ConfirmEmailDTO {
+  email: string;
+  otp: string;
+}

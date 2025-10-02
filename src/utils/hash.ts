@@ -6,14 +6,14 @@ export class Bcrypt {
   
   
 
-  static async hashPassword(password: string): Promise<string> {
-    return await hash(password, this.saltRounds);
+  static async hash(plainText: string): Promise<string> {
+    return await hash(plainText, this.saltRounds);
   }
 
-  static async comparePassword(
-    plainPassword: string,
-    hashedPassword: string
+  static async compare(
+    plainText: string,
+    cipherText: string
   ): Promise<boolean> {
-    return compare(plainPassword, hashedPassword);
+    return compare(plainText, cipherText);
   }
 }

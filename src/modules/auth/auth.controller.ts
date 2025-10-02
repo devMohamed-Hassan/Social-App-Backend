@@ -10,4 +10,8 @@ authRouter.post("/signup", validate(signupSchema), (req, res, next) =>
   authServices.signup(req, res, next)
 );
 
+authRouter.post("/confirm-email", (req, res, next) =>
+  authServices.confirmEmail(req, res, next)
+);
+
 export default authRouter;

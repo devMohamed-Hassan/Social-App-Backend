@@ -1,13 +1,10 @@
 import mongoose, { Schema } from "mongoose";
-// import bcrypt from "bcryptjs";
-
 
 const OtpSchema = new Schema(
   {
     code: {
       type: String,
       required: true,
-     //  set: (value: string) => (value ? bcrypt.hashSync(value, 10) : undefined),
     },
     expiresAt: {
       type: Date,
