@@ -50,7 +50,7 @@ export class AuthServices implements IAuthServices {
       type: "confirmEmail" as EmailEventType,
       email: user.email,
       userName: `${user.firstName} ${user.lastName}`,
-      otp: emailOtp,
+      otp: emailOtp.code,
     });
 
     return res.status(201).json({
@@ -84,16 +84,29 @@ export class AuthServices implements IAuthServices {
       throw new AppError("Email already verified", 400);
     }
 
-    if (
-      user.emailOtp?.expiresAt &&
-      user.emailOtp.expiresAt.getTime() <= Date.now()
-    ) {
+
+    if (!user.emailOtp) {
+      throw new AppError("No OTP found. Please request a new one.", 400);
+    }
+
+    if (user.emailOtp.expiresAt.getTime() <= Date.now()) {
       user.emailOtp = undefined;
       await user.save();
       throw new AppError("OTP expired. Please request a new one.", 400);
     }
 
-    if (user.emailOtp?.code !== otp) {
+    if (user.emailOtp.attempts >= user.emailOtp.maxAttempts) {
+      user.emailOtp = undefined;
+      await user.save();
+      throw new AppError(
+        "Maximum OTP attempts reached. Please request a new one.",
+        400
+      );
+    }
+
+    if (user.emailOtp.code !== otp) {
+      user.emailOtp.attempts += 1;
+      await user.save();
       throw new AppError("Invalid OTP", 400);
     }
 
