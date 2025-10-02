@@ -8,6 +8,7 @@ import { UserRepository } from "../../repositories/user.repository";
 import { Bcrypt } from "../../utils/hash";
 import emailEmitter from "../../services/email/emailEmitter";
 import { buildOtp } from "../../utils/otp/buildOtp";
+import { sendSuccess } from "../../utils/sendSuccess";
 
 interface IAuthServices {
   signup(req: Request, res: Response, next: NextFunction): Promise<Response>;
@@ -18,11 +19,11 @@ export class AuthServices implements IAuthServices {
 
   constructor() {}
 
-  async signup(
+  signup = async (
     req: Request,
     res: Response,
     next: NextFunction
-  ): Promise<Response> {
+  ): Promise<Response> => {
     let { firstName, lastName, email, age, phone, password }: SignupDTO =
       req.body;
 
@@ -53,25 +54,28 @@ export class AuthServices implements IAuthServices {
       otp: user.emailOtp?.code,
     });
 
-    return res.status(201).json({
+    return sendSuccess({
+      res,
+      statusCode: 201,
       message: "User created successfully",
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        age: user.age,
-        emailOtp,
+      data: {
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          age: user.age,
+        },
       },
     });
-  }
+  };
 
-  async confirmEmail(
+  confirmEmail = async (
     req: Request,
     res: Response,
     next: NextFunction
-  ): Promise<Response> {
+  ): Promise<Response> => {
     const { email, otp }: ConfirmEmailDTO = req.body;
 
     const user = await this.userModel.findOne({ email });
@@ -113,24 +117,28 @@ export class AuthServices implements IAuthServices {
     user.emailOtp = undefined;
     await user.save();
 
-    return res.status(200).json({
+    return sendSuccess({
+      res,
+      statusCode: 200,
       message: "Email verified successfully",
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        age: user.age,
+      data: {
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          age: user.age,
+        },
       },
     });
-  }
+  };
 
-  async resendEmailOtp(
+  resendEmailOtp = async (
     req: Request,
     res: Response,
     next: NextFunction
-  ): Promise<Response> {
+  ): Promise<Response> => {
     const { email }: { email: string } = req.body;
 
     const user = await this.userModel.findOne({ email });
@@ -156,8 +164,10 @@ export class AuthServices implements IAuthServices {
       otp: user.emailOtp.code,
     });
 
-    return res.status(200).json({
+    return sendSuccess({
+      res,
+      statusCode: 200,
       message: "A new OTP has been sent to your email",
     });
-  }
+  };
 }
