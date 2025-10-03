@@ -12,6 +12,7 @@ interface Env {
   EMAIL_PASS: string;
   ACCESS_TOKEN_SECRET: string;
   REFRESH_TOKEN_SECRET: string;
+  BEARER_KEY: string;
 }
 
 const getEnv = (key: keyof Env, defaultValue?: string): string => {
@@ -34,4 +35,5 @@ export const ENV: Env = {
   EMAIL_PASS: getEnv("EMAIL_PASS"),
   ACCESS_TOKEN_SECRET: getEnv("ACCESS_TOKEN_SECRET"),
   REFRESH_TOKEN_SECRET: getEnv("REFRESH_TOKEN_SECRET"),
+  BEARER_KEY: getEnv("BEARER_KEY"),
 };
