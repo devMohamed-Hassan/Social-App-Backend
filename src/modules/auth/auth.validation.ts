@@ -46,3 +46,8 @@ export const loginSchema = {
     password: passwordValidator,
   }),
 };
+export const forgotPasswordSchema = {
+  body: z.object({
+    email: emailValidator,
+  }),
+};

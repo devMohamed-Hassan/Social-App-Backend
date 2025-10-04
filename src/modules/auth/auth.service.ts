@@ -120,6 +120,13 @@ export class AuthServices implements IAuthServices {
     user.emailOtp = undefined;
     await user.save();
 
+    emailEmitter.emit("sendEmail", {
+      type: "welcomeEmail",
+      email: user.email,
+      userName: `${user.firstName} ${user.lastName}`,
+      otp: "",
+    });
+
     return sendSuccess({
       res,
       statusCode: 200,
@@ -171,6 +178,10 @@ export class AuthServices implements IAuthServices {
       res,
       statusCode: 200,
       message: "A new OTP has been sent to your email",
+      data: {
+        expiry: user.emailOtp.expiresAt,
+        expiresIn: user.emailOtp.expiresAt.getTime() - Date.now(),
+      },
     });
   };
 
@@ -233,7 +244,7 @@ export class AuthServices implements IAuthServices {
     req: Request,
     res: Response,
     next: NextFunction
-  ): Promise<void> => {
+  ): Promise<Response> => {
     const authorization = req.headers.authorization;
 
     if (!authorization) {
@@ -254,12 +265,55 @@ export class AuthServices implements IAuthServices {
 
     const accessToken = Token.generateAccessToken(newPayload, { jwtid });
 
-    sendSuccess({
+    return sendSuccess({
       res,
       statusCode: 200,
       message: "Access token refreshed successfully",
       data: {
         accessToken,
+      },
+    });
+  };
+
+  forgotPassword = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const { email }: { email: string } = req.body;
+
+    if (!email) {
+      throw new AppError("Email is required", 400);
+    }
+
+    const user = await this.userModel.findByEmail(email);
+
+    if (!user) {
+      throw new AppError("No account found with this email", 404);
+    }
+
+    if (!user.isVerified) {
+      throw new AppError("Please verify your email first", 403);
+    }
+
+    const otp = buildOtp(5, 3);
+    user.passwordOtp = otp;
+    await user.save();
+
+    emailEmitter.emit("sendEmail", {
+      type: "forgotPassword" as EmailEventType,
+      email: user.email,
+      userName: `${user.firstName} ${user.lastName}`,
+      otp: user.passwordOtp?.code,
+    });
+
+    return sendSuccess({
+      res,
+      statusCode: 202,
+      message: "Password reset OTP has been sent to your email",
+      data: {
+        expiry: user.passwordOtp.expiresAt,
+        expiresIn: otp.expiresAt.getTime() - Date.now(),
       },
     });
   };

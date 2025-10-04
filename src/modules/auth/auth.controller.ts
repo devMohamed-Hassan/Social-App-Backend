@@ -17,6 +17,7 @@ authRouter.post(
   validate(validation.confirmEmailSchema),
   authServices.confirmEmail
 );
+
 authRouter.post(
   "/resend-email-otp",
   validate(validation.resendEmailOTPSchema),
@@ -24,6 +25,13 @@ authRouter.post(
 );
 
 authRouter.post("/login", validate(validation.loginSchema), authServices.login);
+
 authRouter.post("/refresh-token", authServices.refreshToken);
+
+authRouter.post(
+  "/forgot-password",
+  validate(validation.forgotPasswordSchema),
+  authServices.forgotPassword
+);
 
 export default authRouter;

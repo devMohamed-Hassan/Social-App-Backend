@@ -1,5 +1,6 @@
 import { model, Schema, Document } from "mongoose";
 import OtpSchema from "./otp.model";
+import { IOtp } from "../types/otp.types";
 
 export interface IUser extends Document {
   firstName: string;
@@ -8,15 +9,8 @@ export interface IUser extends Document {
   password: string;
   phone: string;
   age?: number;
-  emailOtp?:
-    | {
-        code: string;
-        expiresAt: Date;
-        verified: boolean;
-        attempts: number;
-        maxAttempts: number;
-      }
-    | undefined;
+  emailOtp?: IOtp | undefined;
+  passwordOtp?: IOtp | undefined;
   isVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -44,6 +38,7 @@ const UserSchema = new Schema<IUser>(
     isVerified: { type: Boolean, default: false },
 
     emailOtp: OtpSchema,
+    passwordOtp: OtpSchema,
   },
   { timestamps: true }
 );
