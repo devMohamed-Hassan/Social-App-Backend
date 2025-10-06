@@ -13,9 +13,13 @@ interface Env {
   ACCESS_TOKEN_SECRET: string;
   REFRESH_TOKEN_SECRET: string;
   BEARER_KEY: string;
+  AWS_REGION: string;
+  AWS_ACCESS_KEY_ID: string;
+  AWS_SECRET_ACCESS_KEY: string;
+  AWS_S3_BUCKET_NAME: string;
 }
 
-const getEnv = (key: keyof Env, defaultValue?: string): string => {
+const getEnv = <K extends keyof Env>(key: K, defaultValue?: string): string => {
   const value = process.env[key];
   if (!value && !defaultValue) {
     throw new Error(`Missing environment variable: ${key}`);
@@ -36,4 +40,8 @@ export const ENV: Env = {
   ACCESS_TOKEN_SECRET: getEnv("ACCESS_TOKEN_SECRET"),
   REFRESH_TOKEN_SECRET: getEnv("REFRESH_TOKEN_SECRET"),
   BEARER_KEY: getEnv("BEARER_KEY"),
+  AWS_REGION: getEnv("AWS_REGION"),
+  AWS_ACCESS_KEY_ID: getEnv("AWS_ACCESS_KEY_ID"),
+  AWS_SECRET_ACCESS_KEY: getEnv("AWS_SECRET_ACCESS_KEY"),
+  AWS_S3_BUCKET_NAME: getEnv("AWS_S3_BUCKET_NAME"),
 };
