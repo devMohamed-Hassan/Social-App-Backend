@@ -12,8 +12,18 @@ export const s3 = new S3Client({
 (async () => {
   try {
     const data = await s3.send(new ListBucketsCommand({}));
-    console.log("[S3] Connected successfully", data.Buckets);
+    const bucket = data.Buckets?.[0];
+
+    if (bucket?.Name) {
+      console.log(
+        `S3 connected successfully → [Region: ${ENV.AWS_REGION} | Bucket: ${bucket.Name}]`
+      );
+    }
   } catch (err) {
-    console.error("[S3] Connection failed:", err);
+    console.error(
+      `Failed to connect to S3 → [Region: ${ENV.AWS_REGION} | Error: ${
+        (err as Error).message
+      }]`
+    );
   }
 })();
