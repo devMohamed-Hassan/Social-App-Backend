@@ -1,4 +1,8 @@
-import { PutObjectCommand, PutObjectCommandInput } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  PutObjectCommandInput,
+} from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import fs from "fs";
@@ -83,5 +87,14 @@ export class S3Service {
     const fileUrl = `https://${this.bucketName}.s3.${ENV.AWS_REGION}.amazonaws.com/${key}`;
 
     return { uploadUrl, fileUrl };
+  }
+
+  async getAsset({ key }: { key: string }) {
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
+
+    return await s3.send(command);
   }
 }
