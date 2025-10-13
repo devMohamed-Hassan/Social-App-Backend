@@ -1,89 +1,48 @@
-import { createReadStream, statSync } from "fs";
-import { AppError } from "../utils/AppError";
-import { ENV } from "../config/env";
-import { s3 } from "../config/s3";
-import { StoreIn } from "./multer/multer.config";
+import { DeleteObjectCommand, PutObjectCommandInput } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import { randomUUID } from "crypto";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { s3 } from "../config/s3";
+import { ENV } from "../config/env";
+import fs from "fs";
 
 export class S3Service {
-  private static readonly bucketName = ENV.AWS_S3_BUCKET_NAME;
-  private static readonly region = ENV.AWS_REGION;
-  private static readonly ACL = "private";
+  private bucketName: string;
 
-  static getFileUrl(key: string): string {
-    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+  constructor() {
+    this.bucketName = ENV.AWS_S3_BUCKET_NAME;
   }
 
-  static async upload({
-    path = "general",
-    file,
-    storeIn,
-  }: {
-    path?: string;
-    file: Express.Multer.File;
-    storeIn: StoreIn;
-  }): Promise<string> {
-    if (!file) throw new AppError("No file provided for upload", 400);
+  async uploadFile(file: Express.Multer.File, folder = "uploads") {
+    if (!file) throw new Error("No file provided");
 
-    const key = `socialapp/${path}/${Date.now()}-${randomUUID()}-${
-      file.originalname
-    }`;
-    const isLarge = this.isLargeFile(file, storeIn);
-    const fileBody =
-      storeIn === StoreIn.MEMORY ? file.buffer : createReadStream(file.path);
+    const key = `${folder}/${Date.now()}-${file.originalname}`;
+    const bodyStream = fs.createReadStream(file.path);
 
-    if (isLarge) {
-      const upload = new Upload({
-        client: s3,
-        params: {
-          Bucket: this.bucketName,
-          Key: key,
-          Body: fileBody,
-          ContentType: file.mimetype,
-          ACL: this.ACL,
-        },
-        partSize: 10 * 1024 * 1024,
-        queueSize: 6,
-        leavePartsOnError: false,
-      });
+    const params: PutObjectCommandInput = {
+      Bucket: this.bucketName,
+      Key: key,
+      Body: bodyStream,
+      ContentType: file.mimetype,
+    };
 
-      upload.on("httpUploadProgress", (progress) => {
-        console.log(
-          `Uploading ${file.originalname}: ${(
-            ((progress.loaded || 0) / (progress.total || 1)) *
-            100
-          ).toFixed(1)}%`
-        );
-      });
+    const upload = new Upload({
+      client: s3,
+      params,
+      queueSize: 4,
+      partSize: 5 * 1024 * 1024,
+      leavePartsOnError: false,
+    });
 
-      await upload.done();
-    } else {
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: this.bucketName,
-          Key: key,
-          Body: fileBody,
-          ContentType: file.mimetype,
-          ACL: this.ACL,
-        })
-      );
-    }
+    upload.on("httpUploadProgress", (progress) => {
+      if (progress.total) {
+        const percent = Math.round((progress.loaded! / progress.total) * 100);
+        process.stdout.write(`\rUploading: ${percent}%`);
+      }
+    });
 
-    return this.getFileUrl(key);
-  }
+    await upload.done();
+    console.log("\nUpload completed successfully!");
 
-  private static isLargeFile(
-    file: Express.Multer.File,
-    storeIn: StoreIn
-  ): boolean {
-    if (storeIn === StoreIn.MEMORY) return file.size > 5 * 1024 * 1024;
-    try {
-      const stats = statSync(file.path);
-      return stats.size > 10 * 1024 * 1024;
-    } catch {
-      return false;
-    }
+    const fileUrl = `https://${this.bucketName}.s3.${ENV.AWS_REGION}.amazonaws.com/${key}`;
+    return fileUrl;
   }
 }

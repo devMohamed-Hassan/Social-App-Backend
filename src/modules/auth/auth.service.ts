@@ -219,7 +219,6 @@ export class AuthServices implements IAuthServices {
     };
 
     const jwtid = nanoid();
-    console.log("Jwtid after login", jwtid);
 
     const accessToken = Token.generateAccessToken(payload, { jwtid });
     const refreshToken = Token.generateRefreshToken(payload, { jwtid });
@@ -266,7 +265,6 @@ export class AuthServices implements IAuthServices {
       email: user.email,
     };
     const jwtid = payload.jti;
-    console.log("Jwtid after refresh token", jwtid);
 
     const accessToken = Token.generateAccessToken(newPayload, { jwtid });
 
