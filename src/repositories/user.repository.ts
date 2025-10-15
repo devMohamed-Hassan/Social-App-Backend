@@ -41,4 +41,16 @@ export class UserRepository extends BaseRepository<IUser> {
     );
     return user;
   }
+
+  async updateCoverImage(
+    userId: string,
+    imageUrl: string
+  ): Promise<IUser | null> {
+    const user = await UserModel.findByIdAndUpdate(
+      userId,
+      { coverImage: imageUrl },
+      { new: true, select: "-password" }
+    );
+    return user;
+  }
 }

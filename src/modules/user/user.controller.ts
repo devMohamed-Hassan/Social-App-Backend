@@ -22,8 +22,15 @@ userRouter.get(
 userRouter.patch(
   "/profile-image",
   authenticate,
-  upload.single("image"),
+  upload.single("profileImage"),
   userServices.profileImage
+);
+
+userRouter.patch(
+  "/cover-image",
+  authenticate,
+  upload.single("coverImage"),
+  userServices.coverImage
 );
 
 userRouter.post(
