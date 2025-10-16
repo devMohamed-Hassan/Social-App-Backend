@@ -1,7 +1,7 @@
 import { compare, hash } from "bcrypt";
-import { ENV } from "../config/env";
+import { ENV } from "../../config/env";
 
-export class Bcrypt {
+export class HashUtil {
   private static readonly saltRounds: number = ENV.SALT_ROUNDS;
 
   static async hash(plainText: string): Promise<string> {

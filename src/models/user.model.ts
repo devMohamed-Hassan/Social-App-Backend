@@ -1,6 +1,9 @@
 import { model, Schema, Document } from "mongoose";
 import OtpSchema from "./otp.model";
 import { IOtp } from "../types/otp.types";
+import { HashUtil } from "../utils/hash/bcrypt.util";
+import { CryptoUtil } from "../utils/hash/crypto.util";
+import { S3Service } from "../services/s3.service";
 
 export interface IUser extends Document {
   firstName: string;
@@ -8,7 +11,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   phone: string;
-  age?: number;
+  age: number;
   profileImage?: string | undefined;
   coverImage?: string | undefined;
   emailOtp?: IOtp | undefined;
@@ -16,6 +19,9 @@ export interface IUser extends Document {
   isVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
+
+  comparePassword(plainText: string): Promise<boolean>;
+  getSignedUserData(): Promise<Record<string, any>>;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -38,7 +44,82 @@ const UserSchema = new Schema<IUser>(
     emailOtp: OtpSchema,
     passwordOtp: OtpSchema,
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: {
+      virtuals: true,
+      transform: (_: any, ret: Record<string, any>) => {
+        delete ret.password;
+        delete ret.__v;
+        delete ret.emailOtp;
+        delete ret.passwordOtp;
+
+        if (ret.phone) {
+          try {
+            ret.phone = CryptoUtil.decrypt(ret.phone);
+          } catch {}
+        }
+
+        ret.id = ret._id;
+        delete ret._id;
+
+        return ret;
+      },
+    },
+  }
 );
+
+UserSchema.pre("save", async function (next) {
+  if (this.isModified("password") && this.password) {
+    this.password = await HashUtil.hash(this.password);
+  }
+
+  if (this.isModified("phone") && this.phone) {
+    this.phone = CryptoUtil.encrypt(this.phone);
+  }
+
+  next();
+});
+
+UserSchema.methods.getSignedUserData = async function () {
+  const s3Service = new S3Service();
+  const expiresInSeconds = 3600;
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = now + expiresInSeconds;
+
+  const profileImage = this.profileImage
+    ? {
+        url: await s3Service.getSignedUrl(this.profileImage),
+        expiresIn: expiresInSeconds,
+        expiresAt,
+      }
+    : undefined;
+
+  const coverImage = this.coverImage
+    ? {
+        url: await s3Service.getSignedUrl(this.coverImage),
+        expiresIn: expiresInSeconds,
+        expiresAt,
+      }
+    : undefined;
+
+  return {
+    id: this._id,
+    firstName: this.firstName,
+    lastName: this.lastName,
+    email: this.email,
+    phone: CryptoUtil.decrypt(this.phone),
+    age: this.age,
+    isVerified: this.isVerified,
+    profileImage,
+    coverImage,
+    createdAt: this.createdAt,
+    updatedAt: this.updatedAt,
+  };
+};
+
+UserSchema.methods.comparePassword = async function (plainText: string) {
+  return await HashUtil.compare(plainText, this.password);
+};
 
 export const UserModel = model<IUser>("User", UserSchema);

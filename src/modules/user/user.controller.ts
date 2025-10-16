@@ -3,6 +3,7 @@ import { UserServices } from "./user.service";
 import { sendSuccess } from "../../utils/sendSuccess";
 import { authenticate } from "../../middlewares/authenticate.middleware";
 import { upload } from "../../middlewares/multer.middleware";
+import { AppError } from "../../utils/AppError";
 
 const userRouter = Router();
 const userServices = new UserServices();
@@ -10,11 +11,17 @@ const userServices = new UserServices();
 userRouter.get(
   "/me",
   authenticate,
-  (req: Request, res: Response, next: NextFunction) => {
+  async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const userData = await req.user?.getSignedUserData();
+
     return sendSuccess({
       res,
       statusCode: 200,
-      data: { user: req.user },
+      data: { user: userData },
     });
   }
 );

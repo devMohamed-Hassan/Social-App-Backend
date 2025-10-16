@@ -49,12 +49,14 @@ export class UserServices implements IUserServices {
 
     const updatedUser = await this.UserModel.updateProfileImage(userId, newKey);
 
+    const userData = await updatedUser!.getSignedUserData();
+
     return sendSuccess({
       res,
       statusCode: 200,
       message: "Profile image uploaded successfully.",
       data: {
-        user: updatedUser,
+        user: userData,
       },
     });
   };
@@ -150,12 +152,14 @@ export class UserServices implements IUserServices {
 
     const updatedUser = await this.UserModel.updateCoverImage(userId, newKey);
 
+    const userData = await updatedUser!.getSignedUserData();
+
     return sendSuccess({
       res,
       statusCode: 200,
       message: "Cover image uploaded successfully.",
       data: {
-        user: updatedUser,
+        user: userData,
       },
     });
   };

@@ -4,7 +4,7 @@ import { Payload } from "../services/token/verifyToken";
 declare global {
   namespace Express {
     interface Request {
-      user?: Partial<IUser>;
+      user?: IUser;
       payload?: Payload;
     }
   }

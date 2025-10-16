@@ -10,7 +10,6 @@ import {
 import { HydratedDocument } from "mongoose";
 import { AppError } from "../../utils/AppError";
 import { UserRepository } from "../../repositories/user.repository";
-import { Bcrypt } from "../../utils/hash";
 import emailEmitter from "../../services/email/emailEmitter";
 import { buildOtp } from "../../utils/otp/buildOtp";
 import { sendSuccess } from "../../utils/sendSuccess";
@@ -33,7 +32,7 @@ export class AuthServices implements IAuthServices {
     res: Response,
     next: NextFunction
   ): Promise<Response> => {
-    let { firstName, lastName, email, age, phone, password }: SignupDTO =
+    const { firstName, lastName, email, age, phone, password }: SignupDTO =
       req.body;
 
     const isExist = await this.userModel.findByEmail(email);
@@ -41,8 +40,6 @@ export class AuthServices implements IAuthServices {
     if (isExist) {
       throw new AppError("User already exists", 400);
     }
-
-    password = await Bcrypt.hash(password);
 
     const emailOtp = buildOtp(5, 3);
 
@@ -67,16 +64,7 @@ export class AuthServices implements IAuthServices {
       res,
       statusCode: 201,
       message: "User created successfully",
-      data: {
-        user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          age: user.age,
-        },
-      },
+      data: { user: await user.getSignedUserData() },
     });
   };
 
@@ -133,18 +121,25 @@ export class AuthServices implements IAuthServices {
       otp: "",
     });
 
+    const payload = {
+      _id: user._id,
+      email: user.email,
+    };
+
+    const jwtid = nanoid();
+
+    const accessToken = Token.generateAccessToken(payload, { jwtid });
+    const refreshToken = Token.generateRefreshToken(payload, { jwtid });
+
     return sendSuccess({
       res,
       statusCode: 200,
       message: "Email verified successfully",
       data: {
-        user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          age: user.age,
+        user: await user.getSignedUserData(),
+        tokens: {
+          accessToken,
+          refreshToken,
         },
       },
     });
@@ -204,19 +199,18 @@ export class AuthServices implements IAuthServices {
       throw new AppError("Invalid email or password", 401);
     }
 
-    if (!user.isVerified) {
-      throw new AppError("Please verify your email before logging in", 403);
-    }
-
-    const isMatch = await Bcrypt.compare(password, user.password);
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       throw new AppError("Invalid email or password", 401);
+    }
+
+    if (!user.isVerified) {
+      throw new AppError("Please verify your email before logging in", 403);
     }
 
     const payload = {
       _id: user._id,
       email: user.email,
-      //role:user.role
     };
 
     const jwtid = nanoid();
@@ -224,36 +218,12 @@ export class AuthServices implements IAuthServices {
     const accessToken = Token.generateAccessToken(payload, { jwtid });
     const refreshToken = Token.generateRefreshToken(payload, { jwtid });
 
-    const s3Service = new S3Service();
-    const expiresInSeconds = 3600; // ساعة
-    const now = Math.floor(Date.now() / 1000); // timestamp بالثواني
-    const expiresAt = now + expiresInSeconds;
-
-    let profileImageUrl: string | null = null;
-    if (user.profileImage) {
-      profileImageUrl = await s3Service.getSignedUrl(user.profileImage);
-    }
-
     return sendSuccess({
       res,
       statusCode: 200,
       message: "Login successful",
       data: {
-        user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          age: user.age,
-          profileImage: profileImageUrl
-            ? {
-                url: profileImageUrl,
-                expiresIn: expiresInSeconds,
-                expiresAt,
-              }
-            : null,
-        },
+        user: await user.getSignedUserData(),
         tokens: {
           accessToken,
           refreshToken,
@@ -381,7 +351,7 @@ export class AuthServices implements IAuthServices {
       throw new AppError("Invalid OTP. Please check and try again", 400);
     }
 
-    user.password = await Bcrypt.hash(password);
+    user.password = password;
 
     user.passwordOtp = undefined;
 
