@@ -36,7 +36,7 @@ authRouter.post(
 
 authRouter.patch(
   "/reset-password",
-  validate(validation.resetPassword),
+  validate(validation.resetPasswordSechma),
   authServices.resetPassword
 );
 

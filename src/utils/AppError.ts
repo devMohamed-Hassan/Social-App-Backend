@@ -13,14 +13,14 @@ export class AppError extends Error {
 
 export class ValidationError extends AppError {
   details: {
-    source: "body" | "query" | "params";
+    source: "body" | "query" | "params" | "file" | "files";
     issues: { path: string; message: string }[];
   };
 
   constructor(
     message: string,
     details: {
-      source: "body" | "query" | "params";
+      source: "body" | "query" | "params" | "file" | "files";
       issues: { path: string; message: string }[];
     }
   ) {

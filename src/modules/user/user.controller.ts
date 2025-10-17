@@ -3,7 +3,6 @@ import { UserServices } from "./user.service";
 import { sendSuccess } from "../../utils/sendSuccess";
 import { authenticate } from "../../middlewares/authenticate.middleware";
 import { upload } from "../../middlewares/multer.middleware";
-import { AppError } from "../../utils/AppError";
 
 const userRouter = Router();
 const userServices = new UserServices();

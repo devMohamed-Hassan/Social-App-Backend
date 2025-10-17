@@ -1,4 +1,4 @@
-import { Document, Schema, Types } from "mongoose";
+import { Document, model, Schema, Types } from "mongoose";
 
 export type ReactionType = "like" | "love" | "haha" | "wow" | "sad" | "angry";
 
@@ -79,3 +79,5 @@ const PostSchema = new Schema<IPost>(
   },
   { timestamps: true }
 );
+
+export const Post = model<IPost>("Post", PostSchema);

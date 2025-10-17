@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { z } from "zod";
 
 export const firstNameValidator = z
@@ -53,3 +54,38 @@ export const otpValidator = z
   .regex(/^[0-9]{6}$/, {
     message: "OTP must be a 6-digit numeric code",
   });
+
+export const objectIdString = z
+  .string()
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid user ID")
+  .refine((val) => Types.ObjectId.isValid(val), {
+    message: "Invalid user ID",
+  });
+
+export const file = z
+  .object({
+    fieldname: z.string(),
+    originalname: z.string(),
+    encoding: z.string(),
+    mimetype: z.string().refine((val) => val.startsWith("image/"), {
+      message: "Only image files are allowed",
+    }),
+    size: z.number().max(5 * 1024 * 1024, "Image must be <= 5MB"),
+    buffer: z.any().optional(),
+  })
+  .optional();
+
+export const files = z
+  .array(
+    z.object({
+      fieldname: z.string(),
+      originalname: z.string(),
+      encoding: z.string(),
+      mimetype: z.string().refine((val) => val.startsWith("image/"), {
+        message: "Only image files are allowed",
+      }),
+      size: z.number().max(5 * 1024 * 1024, "Each image must be <= 5MB"),
+      buffer: z.any().optional(),
+    })
+  )
+  .optional();

@@ -53,7 +53,7 @@ export const forgotPasswordSchema = {
   }),
 };
 
-export const resetPassword = {
+export const resetPasswordSechma = {
   body: z.object({
     email: emailValidator,
     password: passwordValidator,

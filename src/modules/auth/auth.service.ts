@@ -16,14 +16,13 @@ import { sendSuccess } from "../../utils/sendSuccess";
 import { Token } from "../../services/token/token";
 import { TokenTypes, verifyToken } from "../../services/token/verifyToken";
 import { nanoid } from "nanoid";
-import { S3Service } from "../../services/s3.service";
 
 interface IAuthServices {
   signup(req: Request, res: Response, next: NextFunction): Promise<Response>;
 }
 
 export class AuthServices implements IAuthServices {
-  private userModel = new UserRepository();
+  private UserModel = new UserRepository();
 
   constructor() {}
 
@@ -35,7 +34,7 @@ export class AuthServices implements IAuthServices {
     const { firstName, lastName, email, age, phone, password }: SignupDTO =
       req.body;
 
-    const isExist = await this.userModel.findByEmail(email);
+    const isExist = await this.UserModel.findByEmail(email);
 
     if (isExist) {
       throw new AppError("User already exists", 400);
@@ -43,7 +42,7 @@ export class AuthServices implements IAuthServices {
 
     const emailOtp = buildOtp(5, 3);
 
-    const user: HydratedDocument<IUser> = await this.userModel.create({
+    const user: HydratedDocument<IUser> = await this.UserModel.create({
       firstName,
       lastName,
       email,
@@ -75,7 +74,7 @@ export class AuthServices implements IAuthServices {
   ): Promise<Response> => {
     const { email, otp }: ConfirmEmailDTO = req.body;
 
-    const user = await this.userModel.findByEmail(email);
+    const user = await this.UserModel.findByEmail(email);
 
     if (!user) {
       throw new AppError("User not found", 404);
@@ -152,7 +151,7 @@ export class AuthServices implements IAuthServices {
   ): Promise<Response> => {
     const { email }: { email: string } = req.body;
 
-    const user = await this.userModel.findByEmail(email);
+    const user = await this.UserModel.findByEmail(email);
 
     if (!user) {
       throw new AppError("User not found", 404);
@@ -193,7 +192,7 @@ export class AuthServices implements IAuthServices {
   ): Promise<Response> => {
     const { email, password }: LoginDTO = req.body;
 
-    const user = await this.userModel.findByEmailWithPassword(email);
+    const user = await this.UserModel.findByEmailWithPassword(email);
 
     if (!user) {
       throw new AppError("Invalid email or password", 401);
@@ -277,7 +276,7 @@ export class AuthServices implements IAuthServices {
       throw new AppError("Email is required", 400);
     }
 
-    const user = await this.userModel.findByEmail(email);
+    const user = await this.UserModel.findByEmail(email);
 
     if (!user) {
       throw new AppError("No account found with this email", 404);
@@ -316,7 +315,7 @@ export class AuthServices implements IAuthServices {
   ): Promise<Response> => {
     const { email, otp, password }: ResetPasswordDTO = req.body;
 
-    const user = await this.userModel.findByEmail(email);
+    const user = await this.UserModel.findByEmail(email);
 
     if (!user) {
       throw new AppError("No account found with this email", 404);
