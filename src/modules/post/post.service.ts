@@ -1,7 +1,7 @@
 import { S3Service } from "../../services/s3.service";
 import { NextFunction, Request, Response } from "express";
 import { sendSuccess } from "../../utils/sendSuccess";
-import { creatPostDto } from "./post.dto";
+import { creatPostDTO, reactToPostDTO } from "./post.dto";
 import { UserRepository } from "../../repositories/user.repository";
 import { PostRepository } from "../../repositories/post.repository";
 import { AppError } from "../../utils/AppError";
@@ -25,7 +25,7 @@ export class PostServices implements IPostServices {
     res: Response,
     next: NextFunction
   ): Promise<Response> => {
-    const { content, privacy, tags }: creatPostDto = req.body;
+    const { content, privacy, tags }: creatPostDTO = req.body;
     const images = req.files as Express.Multer.File[] | undefined;
     const user = req.user;
 
@@ -106,6 +106,34 @@ export class PostServices implements IPostServices {
       data: {
         posts,
       },
+    });
+  };
+
+  reactToPost = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const { type }: reactToPostDTO = req.body;
+    const postId = req.params.id;
+    const user = req.user;
+
+    if (!postId) throw new AppError("Post ID is required", 400);
+    if (!user?._id) throw new AppError("Unauthorized", 401);
+
+    const userId = new mongoose.Types.ObjectId(user._id as string);
+
+    const updatedPost = await this.PostModel.toggleReaction(
+      postId,
+      userId,
+      type
+    );
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "Reaction updated successfully",
+      data: updatedPost,
     });
   };
 }

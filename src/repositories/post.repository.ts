@@ -7,16 +7,10 @@ export class PostRepository extends BaseRepository<IPost> {
     super(model);
   }
 
-  /**
-   * Create a new post
-   */
   async createPost(data: Partial<IPost>) {
     return await this.model.create(data);
   }
 
-  /**
-   * Get all posts (optionally filter by author or privacy)
-   */
   async getAllPosts(
     currentUserId: string,
     friendIds: string[] = [],
@@ -46,9 +40,6 @@ export class PostRepository extends BaseRepository<IPost> {
       .sort({ createdAt: -1 });
   }
 
-  /**
-   * Get a single post by ID (with author + tags populated)
-   */
   async getPostById(postId: string | Types.ObjectId) {
     return await this.model.findById(postId).populate([
       { path: "author", select: "firstName lastName profileImage" },
@@ -61,9 +52,6 @@ export class PostRepository extends BaseRepository<IPost> {
     ]);
   }
 
-  /**
-   *  Update post content / privacy / tags / images
-   */
   async updatePost(postId: string, data: Partial<IPost>) {
     return await this.model.findByIdAndUpdate(
       postId,
@@ -72,21 +60,14 @@ export class PostRepository extends BaseRepository<IPost> {
     );
   }
 
-  /**
-   * Delete a post
-   */
   async deletePost(postId: string) {
     return await this.model.findByIdAndDelete(postId);
   }
 
-  /**
-   * Add or toggle reaction
-   */
   async toggleReaction(postId: string, userId: Types.ObjectId, type: string) {
     const post = await this.model.findById(postId);
     if (!post) return null;
 
-    // ensure reactions array exists
     if (!post.reactions) post.reactions = [];
 
     const existing = post.reactions.find(
@@ -95,16 +76,14 @@ export class PostRepository extends BaseRepository<IPost> {
 
     if (existing) {
       if (existing.type === type) {
-        // remove reaction
         post.reactions = post.reactions.filter(
           (r) => r.userId.toString() !== userId.toString()
         );
       } else {
-        // update reaction type
         existing.type = type as any;
       }
     } else {
-      // add new reaction
+
       post.reactions.push({ userId, type } as any);
     }
 
@@ -112,9 +91,6 @@ export class PostRepository extends BaseRepository<IPost> {
     return post;
   }
 
-  /**
-   *  Add comment to post
-   */
   async addComment(postId: string, userId: Types.ObjectId, text: string) {
     const post = await this.model.findById(postId);
     if (!post) return null;
@@ -124,9 +100,6 @@ export class PostRepository extends BaseRepository<IPost> {
     return post;
   }
 
-  /**
-   *  Add reply to a specific comment
-   */
   async addReply(
     postId: string,
     commentIndex: number,

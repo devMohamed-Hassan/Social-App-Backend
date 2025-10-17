@@ -46,3 +46,15 @@ export const createPostSchema = {
       }
     }),
 };
+
+export const reactToPostSchema = {
+  body: z.object({
+    type: z.enum(
+      ["like", "love", "haha", "sad", "angry"],
+      "Reaction type must be one of: like, love, haha, sad, angry"
+    ),
+  }),
+  params: z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid post ID"),
+  }),
+};

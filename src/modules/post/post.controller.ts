@@ -3,7 +3,7 @@ import { upload } from "../../middlewares/multer.middleware";
 import { validate } from "../../middlewares/validate.middleware";
 import { PostServices } from "./post.service";
 import { Router } from "express";
-import { createPostSchema } from "./post.validation";
+import { createPostSchema, reactToPostSchema } from "./post.validation";
 
 const postRouter = Router();
 const postServices = new PostServices();
@@ -34,7 +34,13 @@ postRouter.get(routes.getAllPosts, authenticate, postServices.getAllPosts);
 // postRouter.delete("/:id", authMiddleware, deletePost);
 
 // // Reactions & Comments
-// postRouter.post("/:id/react", authMiddleware, reactToPost);
+postRouter.post(
+  routes.reactToPost,
+  authenticate,
+  validate(reactToPostSchema),
+  postServices.reactToPost
+);
+
 // postRouter.post("/:id/comment", authMiddleware, addComment);
 
 export default postRouter;

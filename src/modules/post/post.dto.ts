@@ -1,4 +1,6 @@
 import z from "zod";
-import { createPostSchema } from "./post.validation";
+import { createPostSchema, reactToPostSchema } from "./post.validation";
 
-export type creatPostDto = z.infer<typeof createPostSchema.body>;
+export type creatPostDTO = z.infer<typeof createPostSchema.body>;
+
+export type reactToPostDTO = z.infer<typeof reactToPostSchema.body>;
