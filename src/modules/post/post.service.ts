@@ -167,11 +167,15 @@ export class PostServices implements IPostServices {
     const { id } = req.params;
     const user = req.user;
 
-    console.log({ id });
-    console.log("heloooooooooooo");
-
     if (!id) throw new AppError("Post ID is required", 400);
     if (!user?._id) throw new AppError("Unauthorized", 401);
+
+    const post = await this.PostModel.findById(id);
+    if (!post) throw new AppError("Post not found", 404);
+
+    if (post.author.toString() !== user._id.toString()) {
+      throw new AppError("You are not allowed to delete this post", 403);
+    }
 
     const deletedPost = await this.PostModel.deletePost(id);
 
