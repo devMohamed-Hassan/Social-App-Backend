@@ -20,6 +20,7 @@ const routes = {
   deletePost: "/:id",
   reactToPost: "/:id/react",
   addComment: "/:id/comment",
+  freezePost: "/:id/freeze",
 };
 
 postRouter.post(
@@ -52,6 +53,13 @@ postRouter.delete(
   authenticate,
   validate(postIdSchema),
   postServices.deletePost
+);
+
+postRouter.patch(
+  routes.freezePost,
+  authenticate,
+  validate(postIdSchema),
+  postServices.freezePost
 );
 
 postRouter.post(

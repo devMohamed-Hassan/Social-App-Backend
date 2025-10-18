@@ -83,7 +83,6 @@ export class PostRepository extends BaseRepository<IPost> {
         existing.type = type as any;
       }
     } else {
-
       post.reactions.push({ userId, type } as any);
     }
 
@@ -112,5 +111,13 @@ export class PostRepository extends BaseRepository<IPost> {
     post.comments[commentIndex].replies?.push({ userId, text });
     await post.save();
     return post;
+  }
+
+  async toggleFreeze(postId: string, freeze: boolean) {
+    return await this.model.findByIdAndUpdate(
+      postId,
+      { isFrozen: freeze },
+      { new: true }
+    );
   }
 }

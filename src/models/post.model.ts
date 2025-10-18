@@ -29,6 +29,7 @@ export interface IPost extends Document {
   reactions?: IReaction[];
   comments?: IComment[];
   isEdited: boolean;
+  isFrozen: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -76,6 +77,7 @@ const PostSchema = new Schema<IPost>(
     reactions: [ReactionSchema],
     comments: [CommentSchema],
     isEdited: { type: Boolean, default: false },
+    isFrozen: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

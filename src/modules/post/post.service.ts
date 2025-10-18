@@ -115,19 +115,34 @@ export class PostServices implements IPostServices {
     next: NextFunction
   ): Promise<Response> => {
     const { type }: reactToPostDTO = req.body;
-    const postId = req.params.id;
+    const { id: postId } = req.params;
     const user = req.user;
 
     if (!postId) throw new AppError("Post ID is required", 400);
     if (!user?._id) throw new AppError("Unauthorized", 401);
 
-    const userId = new mongoose.Types.ObjectId(user._id as string);
+    if (!type) throw new AppError("Reaction type is required", 400);
+
+    const userId = new mongoose.Types.ObjectId(String(user._id));
+
+    const post = await this.PostModel.getPostById(postId);
+    if (!post) throw new AppError("Post not found", 404);
+
+    if (post.isFrozen) {
+      throw new AppError("This post is frozen and cannot be modified", 403);
+    }
+
+    if (String(post.author._id) === String(userId)) {
+      throw new AppError("You cannot react to your own post", 400);
+    }
 
     const updatedPost = await this.PostModel.toggleReaction(
       postId,
       userId,
       type
     );
+
+    if (!updatedPost) throw new AppError("Failed to update reaction", 500);
 
     return sendSuccess({
       res,
@@ -163,24 +178,31 @@ export class PostServices implements IPostServices {
     res: Response,
     next: NextFunction
   ): Promise<Response> => {
-    const { id } = req.params;
+    const { id: postId } = req.params;
     const user = req.user;
 
-    if (!id) throw new AppError("Post ID is required", 400);
+    if (!postId) throw new AppError("Post ID is required", 400);
     if (!user?._id) throw new AppError("Unauthorized", 401);
 
-    const post = await this.PostModel.findById(id);
+    const post = await this.PostModel.getPostById(postId);
     if (!post) throw new AppError("Post not found", 404);
 
-    if (post.author.toString() !== user._id.toString()) {
+    console.log(post.author._id);
+    console.log(user._id);
+
+    if (post.author._id.toString() !== user._id.toString()) {
       throw new AppError("You are not allowed to delete this post", 403);
+    }
+
+    if (post.isFrozen) {
+      throw new AppError("This post is frozen and cannot be deleted", 403);
     }
 
     if (post.images && post.images.length > 0) {
       await this.S3Service.deleteFiles(post.images);
     }
 
-    const deletedPost = await this.PostModel.deletePost(id);
+    const deletedPost = await this.PostModel.deletePost(postId);
 
     return sendSuccess({
       res,
@@ -265,6 +287,46 @@ export class PostServices implements IPostServices {
       res,
       statusCode: 200,
       message: "Post updated successfully",
+      data: updatedPost,
+    });
+  };
+
+  freezePost = async (req: Request, res: Response, next: NextFunction) => {
+    const { id: postId } = req.params;
+    const user = req.user;
+    const { freeze } = req.body;
+
+    if (!user?._id) throw new AppError("Unauthorized", 401);
+
+    if (typeof freeze !== "boolean") {
+      throw new AppError("Invalid freeze value. Must be true or false", 400);
+    }
+
+    if (!postId) throw new AppError("Post ID is required", 400);
+
+    const post = await this.PostModel.getPostById(postId);
+    if (!post) throw new AppError("Post not found", 404);
+
+    if (String(post.author._id) !== String(user._id)) {
+      throw new AppError("You are not allowed to freeze this post", 403);
+    }
+
+    if (post.isFrozen === freeze) {
+      const state = freeze ? "already frozen" : "already unfrozen";
+      return sendSuccess({
+        res,
+        statusCode: 200,
+        message: `Post is ${state}. No changes made.`,
+        data: post,
+      });
+    }
+
+    const updatedPost = await this.PostModel.toggleFreeze(postId, freeze);
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: `Post has been ${freeze ? "frozen" : "unfrozen"} successfully`,
       data: updatedPost,
     });
   };
