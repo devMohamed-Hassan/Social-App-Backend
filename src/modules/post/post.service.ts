@@ -177,6 +177,10 @@ export class PostServices implements IPostServices {
       throw new AppError("You are not allowed to delete this post", 403);
     }
 
+    if (post.images && post.images.length > 0) {
+      await this.S3Service.deleteFiles(post.images);
+    }
+
     const deletedPost = await this.PostModel.deletePost(id);
 
     return sendSuccess({
