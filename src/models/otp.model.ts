@@ -1,4 +1,5 @@
-import mongoose, { Schema } from "mongoose";
+import { Schema } from "mongoose";
+import { HashUtil } from "../utils/hash/bcrypt.util";
 
 const OtpSchema = new Schema(
   {
@@ -25,5 +26,16 @@ const OtpSchema = new Schema(
   },
   { _id: false }
 );
+
+OtpSchema.pre("save", async function (next) {
+  if (this.isModified("code")) {
+    this.code = await HashUtil.hash(this.code);
+  }
+  next();
+});
+
+OtpSchema.methods.compareOtp = async function (plainOtp: string) {
+  return await HashUtil.compare(plainOtp, this.code);
+};
 
 export default OtpSchema;

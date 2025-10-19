@@ -60,3 +60,44 @@ export const resetPasswordSechma = {
     otp: otpValidator,
   }),
 };
+
+export const updatePasswordSchema = {
+  body: z
+    .object({
+      oldPassword: z
+        .string()
+        .nonempty("Old password is required")
+        .min(8, { message: "Old password must be at least 8 characters" })
+        .max(64, { message: "Old password must not exceed 64 characters" }),
+
+      newPassword: z
+        .string()
+        .nonempty("New password is required")
+        .min(8, { message: "Password must be at least 8 characters" })
+        .max(64, { message: "Password must not exceed 64 characters" })
+        .regex(/[A-Z]/, {
+          message: "Password must contain at least one uppercase letter",
+        })
+        .regex(/[0-9]/, {
+          message: "Password must contain at least one number",
+        })
+        .regex(/[@$!%*?&]/, {
+          message: "Password must contain at least one special character",
+        }),
+
+      rePassword: z
+        .string()
+        .nonempty("Please confirm your new password")
+        .min(8, { message: "Password must be at least 8 characters" }),
+    })
+
+    .refine((data) => data.newPassword === data.rePassword, {
+      message: "Passwords do not match",
+      path: ["rePassword"],
+    }) 
+    
+    .refine((data) => data.oldPassword !== data.newPassword, {
+      message: "New password cannot be the same as the old password",
+      path: ["newPassword"],
+    }),
+};

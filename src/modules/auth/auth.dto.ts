@@ -1,24 +1,24 @@
-export interface SignupDTO {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  age: number;
-  phone: string;
-}
+import z from "zod";
+import {
+  confirmEmailSchema,
+  forgotPasswordSchema,
+  loginSchema,
+  resendEmailOTPSchema,
+  resetPasswordSechma,
+  signupSchema,
+  updatePasswordSchema,
+} from "./auth.validation";
 
-export interface ConfirmEmailDTO {
-  email: string;
-  otp: string;
-}
+export type SignupDTO = z.infer<typeof signupSchema.body>;
 
-export interface LoginDTO {
-  email: string;
-  password: string;
-}
+export type ConfirmEmailDTO = z.infer<typeof confirmEmailSchema.body>;
 
-export interface ResetPasswordDTO {
-  email: string;
-  otp: string;
-  password: string;
-}
+export type LoginDTO = z.infer<typeof loginSchema.body>;
+
+export type ResetPasswordDTO = z.infer<typeof resetPasswordSechma.body>;
+
+export type ResendEmailOtpDTO = z.infer<typeof resendEmailOTPSchema.body>;
+
+export type ForgotPasswordDTO = z.infer<typeof forgotPasswordSchema.body>;
+
+export type UpdatePasswordDTO = z.infer<typeof updatePasswordSchema.body>;

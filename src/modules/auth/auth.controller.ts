@@ -2,42 +2,61 @@ import { Router } from "express";
 import { AuthServices } from "./auth.service";
 import { validate } from "../../middlewares/validate.middleware";
 import * as validation from "./auth.validation";
+import { authenticate } from "../../middlewares/authenticate.middleware";
 
 const authRouter = Router();
 const authServices = new AuthServices();
 
+const routes = {
+  signup: "/signup",
+  confirmEmail: "/confirm-email",
+  resendEmailOtp: "/resend-email-otp",
+  login: "/login",
+  refreshToken: "/refresh-token",
+  forgotPassword: "/forgot-password",
+  resetPassword: "/reset-password",
+  updatePassword: "/update-password",
+  requestEmailUpdate: "/request-email-update",
+  confirmEmailUpdate: "/confirm-email-update",
+};
+
 authRouter.post(
-  "/signup",
+  routes.signup,
   validate(validation.signupSchema),
   authServices.signup
 );
 
 authRouter.post(
-  "/confirm-email",
+  routes.confirmEmail,
   validate(validation.confirmEmailSchema),
   authServices.confirmEmail
 );
 
 authRouter.post(
-  "/resend-email-otp",
+  routes.resendEmailOtp,
   validate(validation.resendEmailOTPSchema),
   authServices.resendEmailOtp
 );
 
-authRouter.post("/login", validate(validation.loginSchema), authServices.login);
+authRouter.post(
+  routes.login,
+  validate(validation.loginSchema),
+  authServices.login
+);
 
-authRouter.post("/refresh-token", authServices.refreshToken);
+authRouter.post(routes.refreshToken, authServices.refreshToken);
 
 authRouter.post(
-  "/forgot-password",
+  routes.forgotPassword,
   validate(validation.forgotPasswordSchema),
   authServices.forgotPassword
 );
 
 authRouter.patch(
-  "/reset-password",
+  routes.resetPassword,
   validate(validation.resetPasswordSechma),
   authServices.resetPassword
 );
 
+authRouter.patch(
 export default authRouter;

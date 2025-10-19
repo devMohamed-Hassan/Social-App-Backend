@@ -2,7 +2,8 @@ export type EmailEventType =
   | "confirmEmail"
   | "forgotPassword"
   | "changeEmail"
-  | "welcomeEmail";
+  | "welcomeEmail"
+  | "passwordChanged";
 
 export interface EmailConfig {
   subject: string;
@@ -33,5 +34,11 @@ export const emailEvents: Record<EmailEventType, EmailConfig> = {
     message:
       "We received a request to change your email address on Social App. To confirm this change, please use the verification code below:",
     expiryMinutes: 5,
+  },
+  passwordChanged: {
+    subject: "Your password has been changed",
+    message:
+      "Your password was successfully updated. If this wasn’t you, please reset your password immediately.",
+    expiryMinutes: 0,
   },
 };

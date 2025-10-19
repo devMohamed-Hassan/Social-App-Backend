@@ -3,9 +3,12 @@ import { IUser } from "./../../models/user.model";
 import { NextFunction, Request, Response } from "express";
 import {
   ConfirmEmailDTO,
+  ForgotPasswordDTO,
   LoginDTO,
+  ResendEmailOtpDTO,
   ResetPasswordDTO,
   SignupDTO,
+  UpdatePasswordDTO,
 } from "./auth.dto";
 import { HydratedDocument } from "mongoose";
 import { AppError } from "../../utils/AppError";
@@ -149,7 +152,7 @@ export class AuthServices implements IAuthServices {
     res: Response,
     next: NextFunction
   ): Promise<Response> => {
-    const { email }: { email: string } = req.body;
+    const { email }: ResendEmailOtpDTO = req.body;
 
     const user = await this.UserModel.findByEmail(email);
 
@@ -270,7 +273,7 @@ export class AuthServices implements IAuthServices {
     res: Response,
     next: NextFunction
   ): Promise<Response> => {
-    const { email }: { email: string } = req.body;
+    const { email }: ForgotPasswordDTO = req.body;
 
     if (!email) {
       throw new AppError("Email is required", 400);
@@ -360,6 +363,46 @@ export class AuthServices implements IAuthServices {
       res,
       statusCode: 200,
       message: "Password reset successfully",
+    });
+  };
+
+  updatePassword = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const { oldPassword, newPassword }: UpdatePasswordDTO = req.body;
+
+    const userId = (req as any).user?._id;
+    if (!userId) {
+      throw new AppError("Unauthorized", 401);
+    }
+
+    const user = await this.UserModel.findByIdWithPassword(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    const isMatch = await user.comparePassword(oldPassword);
+    if (!isMatch) {
+      throw new AppError("Incorrect old password", 400);
+    }
+
+    user.password = newPassword;
+    user.credentialChangedAt = new Date();
+    await user.save();
+
+    emailEmitter.emit("sendEmail", {
+      type: "passwordChanged" as EmailEventType,
+      email: user.email,
+      userName: `${user.firstName} ${user.lastName}`,
+      otp: "",
+    });
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "Password updated successfully",
     });
   };
 }

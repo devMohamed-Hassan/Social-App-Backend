@@ -30,6 +30,14 @@ export class UserRepository extends BaseRepository<IUser> {
       .select("+password");
   }
 
+  async findByIdWithPassword(
+    userId: string,
+    projection?: ProjectionFields<IUser>,
+    options?: QueryOptions
+  ): Promise<HydratedDocument<IUser> | null> {
+    return this.model.findById(userId, projection, options).select("+password");
+  }
+
   async updateProfileImage(
     userId: string,
     imageUrl: string
