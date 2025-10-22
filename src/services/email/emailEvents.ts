@@ -7,6 +7,8 @@ export enum EmailEventType {
   EmailChanged = "emailChanged",
   LoginAlert = "loginAlert",
   AccountDeleted = "accountDeleted",
+  Enable2FA = "enable2FA",
+  Login2FA = "login2FA",
 }
 
 export interface EmailConfig {
@@ -62,5 +64,17 @@ export const emailEvents: Record<EmailEventType, EmailConfig> = {
     message:
       "Your account has been successfully deleted. We’re sorry to see you go! If you didn’t request this, please contact support immediately.",
     expiryMinutes: 0,
+  },
+  [EmailEventType.Enable2FA]: {
+    subject: "Enable Two-Step Verification",
+    message:
+      "You requested to enable Two-Step Verification on your Social App account. Use the OTP below to confirm this action:",
+    expiryMinutes: 5,
+  },
+  [EmailEventType.Login2FA]: {
+    subject: "Your Login Verification Code",
+    message:
+      "We detected a login attempt to your Social App account. Use the following OTP to complete your sign-in:",
+    expiryMinutes: 5,
   },
 };

@@ -18,6 +18,9 @@ const routes = {
   updatePassword: "/update-password",
   updateEmail: "/update-email",
   confirmEmailUpdate: "/confirm-email-update",
+  enableTwoFactor: "/enable-2fa",
+  confirmEnable2FA: "/confirm-enable-2fa",
+  login2FA: "/login-2fa",
 };
 
 authRouter.post(
@@ -77,6 +80,25 @@ authRouter.post(
   authenticate,
   validate(validation.confirmEmailUpdateSchema),
   authServices.confirmEmailUpdate
+);
+
+authRouter.post(
+  routes.enableTwoFactor,
+  authenticate,
+  authServices.enable2FARequest
+);
+
+authRouter.post(
+  routes.confirmEnable2FA,
+  authenticate,
+  validate(validation.confirmEnable2FASchema),
+  authServices.confirmEnable2FA
+);
+
+authRouter.post(
+  routes.login2FA,
+  validate(validation.Login2FASchema),
+  authServices.login2FA
 );
 
 export default authRouter;

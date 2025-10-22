@@ -127,3 +127,16 @@ export const confirmEmailUpdateSchema = {
     otp: otpValidator,
   }),
 };
+
+export const confirmEnable2FASchema = {
+  body: z.object({
+    otp: otpValidator,
+  }),
+};
+
+export const Login2FASchema = {
+  body: z.object({
+    email: emailValidator,
+    otp: otpValidator,
+  }),
+};

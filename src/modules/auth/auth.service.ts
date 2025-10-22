@@ -4,7 +4,9 @@ import { NextFunction, Request, Response } from "express";
 import {
   ConfirmEmailDTO,
   ConfirmEmailUpdateDTO,
+  ConfirmEnable2FADTO,
   ForgotPasswordDTO,
+  Login2FADTO,
   LoginDTO,
   ResendEmailOtpDTO,
   ResetPasswordDTO,
@@ -61,7 +63,7 @@ export class AuthServices implements IAuthServices {
       type: EmailEventType.ConfirmEmail,
       email: user.email,
       userName: `${user.firstName} ${user.lastName}`,
-      otp: user.emailOtp?.code,
+      otp: emailOtp.code,
     });
 
     return sendSuccess({
@@ -178,7 +180,7 @@ export class AuthServices implements IAuthServices {
       type: EmailEventType.ConfirmEmail,
       email: user.email,
       userName: `${user.firstName} ${user.lastName}`,
-      otp: user.emailOtp.code,
+      otp: newOtp.code,
     });
 
     return sendSuccess({
@@ -212,6 +214,25 @@ export class AuthServices implements IAuthServices {
 
     if (!user.isVerified) {
       throw new AppError("Please verify your email before logging in", 403);
+    }
+
+    if (user.twoFactorEnabled) {
+      const otp = buildOtp(5, 3);
+      user.twoFactorOtp = otp;
+      await user.save();
+
+      emailEmitter.emit("sendEmail", {
+        type: EmailEventType.Login2FA,
+        email: user.email,
+        userName: `${user.firstName} ${user.lastName}`,
+        otp: otp.code,
+      });
+
+      return sendSuccess({
+        res,
+        statusCode: 200,
+        message: "OTP sent to your email for login verification",
+      });
     }
 
     const payload = {
@@ -314,7 +335,7 @@ export class AuthServices implements IAuthServices {
       type: EmailEventType.ForgotPassword,
       email: user.email,
       userName: `${user.firstName} ${user.lastName}`,
-      otp: user.passwordOtp?.code,
+      otp: otp.code,
     });
 
     return sendSuccess({
@@ -516,9 +537,9 @@ export class AuthServices implements IAuthServices {
     const isValidOtp = await user.updateEmailOtp.compareOtp?.(otp);
 
     if (!isValidOtp) {
-      user.updateEmailOtp.attempts = (user.updateEmailOtp.attempts ?? 0) + 1;
+      user.updateEmailOtp.attempts += 1;
 
-      if (user.updateEmailOtp.attempts >= 3) {
+      if (user.updateEmailOtp.attempts >= user.updateEmailOtp.maxAttempts) {
         user.updateEmailOtp = undefined;
         user.pendingEmail = undefined;
         await user.save();
@@ -549,5 +570,191 @@ export class AuthServices implements IAuthServices {
       statusCode: 200,
       message: "Email address updated successfully",
     });
+  };
+
+  enable2FARequest = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const userId = req.user?._id;
+    if (!userId) throw new AppError("Unauthorized", 401);
+
+    const user = await this.UserModel.findById(userId as string);
+    if (!user) throw new AppError("User not found", 404);
+
+    if (user.twoFactorEnabled) {
+      throw new AppError("2-Step Verification is already enabled", 400);
+    }
+
+    if (user.twoFactorOtp && user.twoFactorOtp.expiresAt > new Date()) {
+      throw new AppError(
+        "OTP already sent. Please wait or check your email.",
+        400
+      );
+    }
+
+    const otp = buildOtp(5, 3);
+    user.twoFactorOtp = otp;
+    await user.save();
+
+    emailEmitter.emit("sendEmail", {
+      type: EmailEventType.Enable2FA,
+      email: user.email,
+      userName: `${user.firstName} ${user.lastName}`,
+      otp: otp.code,
+    });
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "OTP sent to your email for enabling 2FA",
+    });
+  };
+
+  confirmEnable2FA = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const { otp }: ConfirmEnable2FADTO = req.body;
+    const userId = req.user?._id;
+
+    if (!userId) throw new AppError("Unauthorized", 401);
+    const user = await this.UserModel.findById(userId as string);
+    if (!user || !user.twoFactorOtp) throw new AppError("No OTP found", 400);
+
+    if (user.twoFactorOtp.expiresAt.getTime() < Date.now()) {
+      user.twoFactorOtp = undefined;
+      await user.save();
+      throw new AppError("OTP expired. Please request a new one.", 400);
+    }
+
+    const isValid = await user.twoFactorOtp.compareOtp?.(otp);
+    if (!isValid) {
+      user.twoFactorOtp.attempts += 1;
+
+      if (user.twoFactorOtp.attempts >= user.twoFactorOtp.maxAttempts) {
+        user.twoFactorOtp = undefined;
+        await user.save();
+        throw new AppError(
+          "Too many invalid attempts. Please request a new OTP.",
+          400
+        );
+      }
+
+      await user.save();
+      throw new AppError("Invalid OTP", 400);
+    }
+
+    user.twoFactorEnabled = true;
+    user.twoFactorOtp = undefined;
+    await user.save();
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "2-Step Verification has been enabled successfully",
+    });
+  };
+
+  login2FA = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const { email, otp }: Login2FADTO = req.body;
+
+    const user = await this.UserModel.findByEmail(email);
+
+    if (!user) {
+      throw new AppError("Invalid email or password", 400);
+    }
+
+    if (!user.isVerified) {
+      throw new AppError("Please verify your email before logging in", 403);
+    }
+
+    if (!user.twoFactorEnabled) {
+      throw new AppError(
+        "2-Step Verification is not enabled for this account",
+        400
+      );
+    }
+
+    if (!user.twoFactorOtp) {
+      throw new AppError("No 2FA verification in progress", 400);
+    }
+
+    if (user.twoFactorOtp.expiresAt.getTime() < Date.now()) {
+      user.twoFactorOtp = undefined;
+      await user.save();
+      throw new AppError("OTP expired. Please log in again.", 400);
+    }
+
+    const isValid = await user.twoFactorOtp.compareOtp?.(otp);
+    if (!isValid) {
+      user.twoFactorOtp.attempts += 1;
+
+      if (user.twoFactorOtp.attempts >= user.twoFactorOtp.maxAttempts) {
+        user.twoFactorOtp = undefined;
+        await user.save();
+        throw new AppError(
+          "Too many invalid attempts. Please log in again.",
+          400
+        );
+      }
+
+      await user.save();
+      throw new AppError("Invalid OTP", 400);
+    }
+
+    user.twoFactorOtp = undefined;
+    await user.save();
+
+    const payload = {
+      _id: user._id,
+      email: user.email,
+    };
+
+    const jwtid = nanoid();
+
+    const accessToken = Token.generateAccessToken(payload, { jwtid });
+    const refreshToken = Token.generateRefreshToken(payload, { jwtid });
+
+    emailEmitter.emit("sendEmail", {
+      type: EmailEventType.LoginAlert,
+      email: user.email,
+      userName: `${user.firstName} ${user.lastName}`,
+      loginDetails: {
+        ip: req.ip || "Unknown",
+        userAgent: req.headers["user-agent"] || "Unknown",
+        time: new Date().toLocaleString("en-GB", { timeZone: "Africa/Cairo" }),
+        location: "Cairo, Egypt",
+      },
+    });
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "Login successful (2FA verified)",
+      data: {
+        user: await user.getSignedUserData(),
+        tokens: {
+          accessToken,
+          refreshToken,
+        },
+      },
+    });
+  };
+
+  disable2FA = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+
+
+    
   };
 }

@@ -17,7 +17,9 @@ export interface IUser extends Document {
   emailOtp?: IOtp | undefined;
   passwordOtp?: IOtp | undefined;
   updateEmailOtp?: IOtp | undefined;
+  twoFactorOtp?: IOtp | undefined;
   isVerified: boolean;
+  twoFactorEnabled: boolean;
   friends: Types.ObjectId[];
   friendRequests: {
     from: Types.ObjectId;
@@ -56,9 +58,11 @@ const UserSchema = new Schema<IUser>(
     profileImage: { type: String },
     coverImage: { type: String },
     isVerified: { type: Boolean, default: false },
+    twoFactorEnabled: { type: Boolean, default: false },
     emailOtp: OtpSchema,
     passwordOtp: OtpSchema,
     updateEmailOtp: OtpSchema,
+    twoFactorOtp: OtpSchema,
     friends: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
     friendRequests: [
       {
