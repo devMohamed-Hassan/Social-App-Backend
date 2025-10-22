@@ -2,6 +2,7 @@ import { EmailEventType } from "./../../services/email/emailEvents";
 import { IUser } from "./../../models/user.model";
 import { NextFunction, Request, Response } from "express";
 import {
+  ConfirmDisable2FADTO,
   ConfirmEmailDTO,
   ConfirmEmailUpdateDTO,
   ConfirmEnable2FADTO,
@@ -748,13 +749,86 @@ export class AuthServices implements IAuthServices {
     });
   };
 
-  disable2FA = async (
+  disable2FA = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?._id;
+    if (!userId) throw new AppError("Unauthorized", 401);
+
+    const user = await this.UserModel.findById(userId as string);
+    if (!user) throw new AppError("User not found", 404);
+
+    if (!user.twoFactorEnabled) {
+      throw new AppError("2-Step Verification is not enabled", 400);
+    }
+
+    const otp = buildOtp(5, 3);
+    user.twoFactorOtp = otp;
+    await user.save();
+
+    emailEmitter.emit("sendEmail", {
+      type: EmailEventType.Disable2FA,
+      email: user.email,
+      userName: `${user.firstName} ${user.lastName}`,
+      otp: otp.code,
+    });
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "OTP sent to your email to confirm disabling 2FA",
+    });
+  };
+
+  confirmDisable2FA = async (
     req: Request,
     res: Response,
     next: NextFunction
   ): Promise<Response> => {
+    const { otp }: ConfirmDisable2FADTO = req.body;
+    const userId = req.user?._id;
 
+    if (!userId) throw new AppError("Unauthorized", 401);
 
-    
+    const user = await this.UserModel.findById(userId as string);
+    if (!user || !user.twoFactorEnabled || !user.twoFactorOtp)
+      throw new AppError("No 2FA disable process in progress", 400);
+
+    if (user.twoFactorOtp.expiresAt.getTime() < Date.now()) {
+      user.twoFactorOtp = undefined;
+      await user.save();
+      throw new AppError("OTP expired, please request again", 400);
+    }
+
+    const isValid = await user.twoFactorOtp.compareOtp?.(otp);
+    if (!isValid) {
+      user.twoFactorOtp.attempts += 1;
+
+      if (user.twoFactorOtp.attempts >= user.twoFactorOtp.maxAttempts) {
+        user.twoFactorOtp = undefined;
+        await user.save();
+        throw new AppError(
+          "Too many invalid attempts. Please request again.",
+          400
+        );
+      }
+
+      await user.save();
+      throw new AppError("Invalid OTP", 400);
+    }
+
+    user.twoFactorEnabled = false;
+    user.twoFactorOtp = undefined;
+    await user.save();
+
+    emailEmitter.emit("sendEmail", {
+      type: EmailEventType.Disable2FAConfirmed,
+      email: user.email,
+      userName: `${user.firstName} ${user.lastName}`,
+    });
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "2-Step Verification has been disabled successfully",
+    });
   };
 }

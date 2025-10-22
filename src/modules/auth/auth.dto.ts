@@ -1,5 +1,6 @@
 import z from "zod";
 import {
+  confirmDisable2FASchema,
   confirmEmailSchema,
   confirmEmailUpdateSchema,
   confirmEnable2FASchema,
@@ -36,3 +37,5 @@ export type ConfirmEmailUpdateDTO = z.infer<
 export type ConfirmEnable2FADTO = z.infer<typeof confirmEnable2FASchema.body>;
 
 export type Login2FADTO = z.infer<typeof Login2FASchema.body>;
+
+export type ConfirmDisable2FADTO = z.infer<typeof confirmDisable2FASchema.body>;

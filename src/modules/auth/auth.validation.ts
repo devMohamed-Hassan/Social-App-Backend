@@ -140,3 +140,9 @@ export const Login2FASchema = {
     otp: otpValidator,
   }),
 };
+
+export const confirmDisable2FASchema = {
+  body: z.object({
+    otp: otpValidator,
+  }),
+};

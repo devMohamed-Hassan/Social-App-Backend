@@ -21,6 +21,8 @@ const routes = {
   enableTwoFactor: "/enable-2fa",
   confirmEnable2FA: "/confirm-enable-2fa",
   login2FA: "/login-2fa",
+  disable2FA: "/disable-2fa",
+  confirmDisable2FA: "/confirm-disable-2fa",
 };
 
 authRouter.post(
@@ -99,6 +101,15 @@ authRouter.post(
   routes.login2FA,
   validate(validation.Login2FASchema),
   authServices.login2FA
+);
+
+authRouter.post(routes.disable2FA, authenticate, authServices.disable2FA);
+
+authRouter.post(
+  routes.confirmDisable2FA,
+  authenticate,
+  validate(validation.confirmDisable2FASchema),
+  authServices.confirmDisable2FA
 );
 
 export default authRouter;

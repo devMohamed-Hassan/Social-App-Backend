@@ -8,6 +8,8 @@ export enum EmailEventType {
   LoginAlert = "loginAlert",
   AccountDeleted = "accountDeleted",
   Enable2FA = "enable2FA",
+  Disable2FA = "disable2FA",
+  Disable2FAConfirmed = "disable2FAConfirmed",
   Login2FA = "login2FA",
 }
 
@@ -76,5 +78,20 @@ export const emailEvents: Record<EmailEventType, EmailConfig> = {
     message:
       "We detected a login attempt to your Social App account. Use the following OTP to complete your sign-in:",
     expiryMinutes: 5,
+  },
+  [EmailEventType.Disable2FA]: {
+    subject: "Confirm disabling Two-Step Verification",
+    message:
+      "We received a request to disable Two-Step Verification (2FA) on your account. " +
+      "If this was you, please confirm by entering the verification code below. " +
+      "If this wasn’t you, ignore this email or contact support immediately.",
+    expiryMinutes: 5,
+  },
+  [EmailEventType.Disable2FAConfirmed]: {
+    subject: "Two-Step Verification Disabled",
+    message:
+      "Two-Step Verification (2FA) has been successfully disabled on your account. " +
+      "If you didn’t make this change, please enable 2FA again immediately or contact our support team for assistance.",
+    expiryMinutes: 0,
   },
 };
