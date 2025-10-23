@@ -1,11 +1,13 @@
 import { S3Service } from "../../services/s3.service";
 import { NextFunction, Request, Response } from "express";
 import { sendSuccess } from "../../utils/sendSuccess";
-import { creatPostDTO, reactToPostDTO } from "./post.dto";
+import { creatPostDTO, updatePostDTO, reactToPostDTO } from "./post.dto";
 import { UserRepository } from "../../repositories/user.repository";
 import { PostRepository } from "../../repositories/post.repository";
 import { AppError } from "../../utils/AppError";
 import mongoose, { Types } from "mongoose";
+import emailEmitter from "../../services/email/emailEmitter";
+import { EmailEventType } from "../../services/email/emailEvents";
 
 export interface IPostServices {
   createPost(
@@ -74,6 +76,20 @@ export class PostServices implements IPostServices {
       images: uploadedImageKeys,
       isEdited: false,
     });
+
+    if (validTagIds.length > 0) {
+      const taggedUsers = await this.UserModel.findAll({
+        _id: { $in: validTagIds },
+      });
+
+      for (const taggedUser of taggedUsers) {
+        emailEmitter.emit("sendEmail", {
+          type: EmailEventType.UserTagged,
+          email: taggedUser.email,
+          userName: `${taggedUser.firstName} ${taggedUser.lastName}`,
+        });
+      }
+    }
 
     return sendSuccess({
       res,
@@ -265,7 +281,7 @@ export class PostServices implements IPostServices {
     next: NextFunction
   ): Promise<Response> => {
     const { id: postId } = req.params;
-    const { content, privacy, tags }: Partial<creatPostDTO> = req.body;
+    const { content, privacy, tags }: updatePostDTO = req.body;
     const images = req.files as Express.Multer.File[] | undefined;
     const user = req.user;
 
@@ -329,6 +345,27 @@ export class PostServices implements IPostServices {
       tags: validTagIds?.length ? validTagIds : post.tags ?? [],
       images: updatedImageKeys ?? [],
     });
+
+    if (validTagIds && validTagIds.length > 0) {
+      const existingTagIds = post.tags?.map(tag => tag.toString()) || [];
+      const newTagIds = validTagIds.filter(tagId => 
+        !existingTagIds.includes(tagId.toString())
+      );
+
+      if (newTagIds.length > 0) {
+        const newlyTaggedUsers = await this.UserModel.findAll({
+          _id: { $in: newTagIds },
+        });
+
+        for (const taggedUser of newlyTaggedUsers) {
+          emailEmitter.emit("sendEmail", {
+            type: EmailEventType.UserTagged,
+            email: taggedUser.email,
+            userName: `${taggedUser.firstName} ${taggedUser.lastName}`,
+          });
+        }
+      }
+    }
 
     return sendSuccess({
       res,

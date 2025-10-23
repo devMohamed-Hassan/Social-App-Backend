@@ -7,6 +7,7 @@ import {
   createPostSchema,
   postIdSchema,
   reactToPostSchema,
+  updatePostSchema,
 } from "./post.validation";
 
 const postRouter = Router();
@@ -44,7 +45,7 @@ postRouter.put(
   routes.updatePost,
   authenticate,
   upload.array("images", 5),
-  validate(postIdSchema),
+  validate(updatePostSchema),
   postServices.updatePost
 );
 

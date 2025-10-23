@@ -11,6 +11,7 @@ export enum EmailEventType {
   Disable2FA = "disable2FA",
   Disable2FAConfirmed = "disable2FAConfirmed",
   Login2FA = "login2FA",
+  UserTagged = "userTagged",
 }
 
 export interface EmailConfig {
@@ -91,7 +92,13 @@ export const emailEvents: Record<EmailEventType, EmailConfig> = {
     subject: "Two-Step Verification Disabled",
     message:
       "Two-Step Verification (2FA) has been successfully disabled on your account. " +
-      "If you didn’t make this change, please enable 2FA again immediately or contact our support team for assistance.",
+      "If you didn't make this change, please enable 2FA again immediately or contact our support team for assistance.",
+    expiryMinutes: 0,
+  },
+  [EmailEventType.UserTagged]: {
+    subject: "You've been tagged in a post!",
+    message:
+      "Someone has tagged you in a post on Social App! Check out what they shared and join the conversation.",
     expiryMinutes: 0,
   },
 };
