@@ -59,4 +59,68 @@ export class UserRepository extends BaseRepository<IUser> {
       { new: true, select: "-password" }
     );
   }
+
+  async blockUser(
+    userId: string,
+    blockedUserId: string
+  ): Promise<HydratedDocument<IUser> | null> {
+    return this.model.findByIdAndUpdate(
+      userId,
+      { $addToSet: { blockedUsers: blockedUserId } },
+      { new: true, select: "-password" }
+    );
+  }
+
+  async unblockUser(
+    userId: string,
+    blockedUserId: string
+  ): Promise<HydratedDocument<IUser> | null> {
+    return this.model.findByIdAndUpdate(
+      userId,
+      { $pull: { blockedUsers: blockedUserId } },
+      { new: true, select: "-password" }
+    );
+  }
+
+  async isUserBlocked(userId: string, targetUserId: string): Promise<boolean> {
+    const user = await this.model.findById(userId, { blockedUsers: 1 });
+    if (!user) return false;
+
+    return user.blockedUsers.some(
+      (blockedId) => blockedId.toString() === targetUserId
+    );
+  }
+
+  async getBlockedUsers(
+    userId: string,
+    projection?: ProjectionFields<IUser>,
+    options?: QueryOptions
+  ): Promise<HydratedDocument<IUser>[]> {
+    const user = await this.model.findById(userId, { blockedUsers: 1 });
+    if (!user || user.blockedUsers.length === 0) return [];
+
+    return this.model.find(
+      { _id: { $in: user.blockedUsers } },
+      projection,
+      options
+    );
+  }
+
+  async getUsersWhoBlockedMe(userId: string): Promise<string[]> {
+    const users = await this.model.find({ blockedUsers: userId }, { _id: 1 });
+
+    return users.map((user) => user._id as string);
+  }
+
+  async removeFriendship(userId1: string, userId2: string): Promise<void> {
+    await this.model.findByIdAndUpdate(
+      userId1,
+      { $pull: { friends: userId2 } }
+    );
+
+    await this.model.findByIdAndUpdate(
+      userId2,
+      { $pull: { friends: userId1 } }
+    );
+  }
 }

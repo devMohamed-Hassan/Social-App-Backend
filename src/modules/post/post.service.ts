@@ -94,9 +94,18 @@ export class PostServices implements IPostServices {
     const userData = await this.UserModel.findById(user._id as string);
     const friendIds = userData?.friends?.map((f: any) => String(f._id)) || [];
 
+    const blockedByUsers = await this.UserModel.getUsersWhoBlockedMe(
+      user._id as string
+    );
+    
+    const blockedUsers = userData?.blockedUsers?.map((id: any) => String(id)) || [];
+
     const posts = await this.PostModel.getAllPosts(
       user._id as string,
-      friendIds
+      friendIds,
+      {},
+      blockedByUsers,
+      blockedUsers
     );
 
     return sendSuccess({
@@ -128,6 +137,24 @@ export class PostServices implements IPostServices {
     const post = await this.PostModel.getPostById(postId);
     if (!post) throw new AppError("Post not found", 404);
 
+    const isBlockedByAuthor = await this.UserModel.isUserBlocked(
+      post.author._id.toString(),
+      user._id.toString()
+    );
+
+    if (isBlockedByAuthor) {
+      throw new AppError("You cannot interact with this post", 403);
+    }
+
+    const hasBlockedAuthor = await this.UserModel.isUserBlocked(
+      user._id.toString(),
+      post.author._id.toString()
+    );
+
+    if (hasBlockedAuthor) {
+      throw new AppError("You cannot interact with this post", 403);
+    }
+
     if (post.isFrozen) {
       throw new AppError("This post is frozen and cannot be modified", 403);
     }
@@ -158,12 +185,32 @@ export class PostServices implements IPostServices {
     next: NextFunction
   ): Promise<Response> => {
     const { id } = req.params;
+    const user = req.user;
 
     if (!id) throw new AppError("Post ID is required", 400);
+    if (!user?._id) throw new AppError("Unauthorized", 401);
 
     const post = await this.PostModel.getPostById(id);
 
     if (!post) throw new AppError("Post not found", 404);
+
+    const isBlockedByAuthor = await this.UserModel.isUserBlocked(
+      post.author._id.toString(),
+      user._id.toString()
+    );
+
+    if (isBlockedByAuthor) {
+      throw new AppError("You cannot view this post", 403);
+    }
+
+    const hasBlockedAuthor = await this.UserModel.isUserBlocked(
+      user._id.toString(),
+      post.author._id.toString()
+    );
+
+    if (hasBlockedAuthor) {
+      throw new AppError("You cannot view this post", 403);
+    }
 
     return sendSuccess({
       res,

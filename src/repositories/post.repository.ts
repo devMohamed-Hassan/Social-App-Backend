@@ -14,7 +14,9 @@ export class PostRepository extends BaseRepository<IPost> {
   async getAllPosts(
     currentUserId: string,
     friendIds: string[] = [],
-    filter: Partial<IPost> = {}
+    filter: Partial<IPost> = {},
+    blockedByUsers: string[] = [],
+    blockedUsers: string[] = []
   ) {
     const userObjectId = new Types.ObjectId(currentUserId);
 
@@ -25,10 +27,16 @@ export class PostRepository extends BaseRepository<IPost> {
         { $and: [{ privacy: "friends" }, { author: { $in: friendIds } }] },
       ],
     };
+    
+    const allBlockedUsers = [...blockedByUsers, ...blockedUsers];
+    const blockingFilter: mongoose.FilterQuery<IPost> = {
+      author: { $nin: allBlockedUsers.map(id => new Types.ObjectId(id)) }
+    };
 
     const finalFilter: mongoose.FilterQuery<IPost> = {
       ...filter,
       ...privacyFilter,
+      ...blockingFilter,
     };
 
     return await this.model

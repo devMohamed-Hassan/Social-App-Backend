@@ -46,6 +46,16 @@ export class FriendService implements IFriendServices {
 
     if (!toUser) throw new AppError("User not found", 404);
 
+    const isBlocked = await this.userRepository.isUserBlocked(toUserId, fromId.toString());
+    if (isBlocked) {
+      throw new AppError("You cannot send a friend request to this user", 403);
+    }
+
+    const hasBlockedTarget = await this.userRepository.isUserBlocked(fromId.toString(), toUserId);
+    if (hasBlockedTarget) {
+      throw new AppError("You cannot send a friend request to a user you have blocked", 403);
+    }
+
     const toUserObjectId = toUser._id as Types.ObjectId;
 
     if (
@@ -106,6 +116,14 @@ export class FriendService implements IFriendServices {
     const fromUser = await this.userRepository.findById(fromUserId);
 
     if (!toUser || !fromUser) throw new AppError("User not found", 404);
+
+
+    const isFromUserBlocked = await this.userRepository.isUserBlocked(toId.toString(), fromUserId);
+    const isToUserBlocked = await this.userRepository.isUserBlocked(fromUserId, toId.toString());
+    
+    if (isFromUserBlocked || isToUserBlocked) {
+      throw new AppError("Cannot accept friend request due to blocking", 403);
+    }
 
     const fromObjectId = fromUser._id as Types.ObjectId;
     const toObjectId = toUser._id as Types.ObjectId;

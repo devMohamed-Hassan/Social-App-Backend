@@ -35,7 +35,15 @@ export const validate = (schema: SchemaShape) => {
         const result = validator.safeParse(data);
         if (!result.success) throw formatError(result.error, key);
 
-        (req as any)[key] = result.data;
+        if (key === 'query') {
+          Object.assign(req.query, result.data);
+        } else if (key === 'params') {
+          Object.assign(req.params, result.data);
+        } else if (key === 'body') {
+          Object.assign(req.body, result.data);
+        } else {
+          (req as any)[key] = result.data;
+        }
       }
 
       next();

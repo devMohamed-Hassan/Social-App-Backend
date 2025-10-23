@@ -3,6 +3,12 @@ import { UserServices } from "./user.service";
 import { sendSuccess } from "../../utils/sendSuccess";
 import { authenticate } from "../../middlewares/authenticate.middleware";
 import { upload } from "../../middlewares/multer.middleware";
+import { validate } from "../../middlewares/validate.middleware";
+import {
+  blockUserSchema,
+  unblockUserSchema,
+  getBlockedUsersSchema,
+} from "./user.validation";
 
 const userRouter = Router();
 const userServices = new UserServices();
@@ -52,5 +58,26 @@ userRouter.delete(
 );
 
 userRouter.delete("/cover-image", authenticate, userServices.deleteCoverImage);
+
+userRouter.post(
+  "/block/:id",
+  authenticate,
+  validate(blockUserSchema),
+  userServices.blockUser
+);
+
+userRouter.delete(
+  "/block/:id",
+  authenticate,
+  validate(unblockUserSchema),
+  userServices.unblockUser
+);
+
+userRouter.get(
+  "/blocked",
+  authenticate,
+  validate(getBlockedUsersSchema),
+  userServices.getBlockedUsers
+);
 
 export default userRouter;

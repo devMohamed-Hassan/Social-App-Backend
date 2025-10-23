@@ -11,14 +11,24 @@ export interface IUserServices {
     res: Response,
     next: NextFunction
   ): Promise<Response>;
+  blockUser(req: Request, res: Response, next: NextFunction): Promise<Response>;
+  unblockUser(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  getBlockedUsers(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
 }
 
 export class UserServices implements IUserServices {
   private UserModel = new UserRepository();
   private s3Service = new S3Service();
 
-  constructor() {
-  }
+  constructor() {}
 
   profileImage = async (
     req: Request,
@@ -184,6 +194,122 @@ export class UserServices implements IUserServices {
       res,
       statusCode: 200,
       message: "Cover image deleted successfully",
+    });
+  };
+
+  blockUser = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const userId = req.user?.id;
+    const { id: targetUserId } = req.params;
+
+    if (!targetUserId) {
+      throw new AppError("Target user ID is required", 400);
+    }
+
+    if (userId === targetUserId) {
+      throw new AppError("You cannot block yourself", 400);
+    }
+
+    const targetUser = await this.UserModel.findById(targetUserId);
+    if (!targetUser) {
+      throw new AppError("User not found", 404);
+    }
+
+    const isAlreadyBlocked = await this.UserModel.isUserBlocked(
+      userId,
+      targetUserId
+    );
+    if (isAlreadyBlocked) {
+      throw new AppError("User is already blocked", 400);
+    }
+
+    const currentUser = await this.UserModel.findById(userId);
+    const areFriends = currentUser?.friends.some(
+      (friendId) => friendId.toString() === targetUserId
+    );
+
+    if (areFriends) {
+      await this.UserModel.removeFriendship(userId, targetUserId);
+    }
+
+    await this.UserModel.blockUser(userId, targetUserId);
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "User blocked successfully",
+      data: {
+        blockedUser: {
+          id: targetUser._id,
+          firstName: targetUser.firstName,
+          lastName: targetUser.lastName,
+          email: targetUser.email,
+        },
+        friendshipRemoved: areFriends,
+      },
+    });
+  };
+
+  unblockUser = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const userId = req.user?.id;
+    const { id: targetUserId } = req.params;
+
+    if (!targetUserId) {
+      throw new AppError("Target user ID is required", 400);
+    }
+
+    const isBlocked = await this.UserModel.isUserBlocked(userId, targetUserId);
+    if (!isBlocked) {
+      throw new AppError("User is not blocked", 400);
+    }
+
+    await this.UserModel.unblockUser(userId, targetUserId);
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "User unblocked successfully",
+    });
+  };
+
+  getBlockedUsers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const userId = req.user?.id;
+
+    const blockedUsers = await this.UserModel.getBlockedUsers(userId);
+
+    const blockedUsersData = await Promise.all(
+      blockedUsers.map(async (user) => {
+        const userData = await user.getSignedUserData();
+        return {
+          id: userData.id,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          email: userData.email,
+          profileImage: userData.profileImage,
+          blockedAt: user.updatedAt,
+        };
+      })
+    );
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "Blocked users retrieved successfully",
+      data: {
+        blockedUsers: blockedUsersData,
+        count: blockedUsersData.length,
+      },
     });
   };
 }

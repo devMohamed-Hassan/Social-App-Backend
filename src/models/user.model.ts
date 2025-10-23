@@ -34,6 +34,7 @@ export interface IUser extends Document {
   twoFactorEnabled: boolean;
   friends: Types.ObjectId[];
   friendRequests: IFriendRequest[];
+  blockedUsers: Types.ObjectId[];
   credentialChangedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -83,6 +84,7 @@ const UserSchema = new Schema<IUser>(
         },
       },
     ],
+    blockedUsers: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
     credentialChangedAt: { type: Date },
   },
   {
