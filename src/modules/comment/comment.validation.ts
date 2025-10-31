@@ -28,3 +28,11 @@ export const addReplySchema = {
       .max(300, "Reply text must not exceed 300 characters"),
   }),
 };
+
+export const deleteCommentSchema = {
+  params: z.object({
+    commentIndex: z
+      .string()
+      .regex(/^\d+$/, "Comment index must be a valid number"),
+  }),
+};

@@ -113,4 +113,36 @@ export class CommentServices implements ICommentServices {
       data: newReply,
     });
   };
+
+  deleteComment = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const { id: postId, commentIndex } = req.params;
+
+    const post = await this.postRepository.getPostById(postId as string);
+    if (!post) throw new AppError("Post not found", 404);
+
+    const index = Number(commentIndex);
+
+    if (!post.comments || !post.comments[index])
+      throw new AppError("Comment not found", 404);
+
+    console.log(req.user?.id);
+    console.log(post.comments);
+
+    if (post.comments[index].userId._id.toString() !== req.user?.id)
+      throw new AppError("You can only delete your own comment", 403);
+
+    post.comments.splice(index, 1);
+    await post.save();
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "Comment deleted successfully",
+      data: {},
+    });
+  };
 }

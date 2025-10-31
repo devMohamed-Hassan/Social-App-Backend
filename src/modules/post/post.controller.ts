@@ -9,6 +9,7 @@ import {
   reactToPostSchema,
   updatePostSchema,
 } from "./post.validation";
+import commentRouter from "../comment/comment.controller";
 
 const postRouter = Router();
 const postServices = new PostServices();
@@ -20,8 +21,8 @@ const routes = {
   updatePost: "/:id",
   deletePost: "/:id",
   reactToPost: "/:id/react",
-  addComment: "/:id/comment",
   freezePost: "/:id/freeze",
+  comments: "/:id/comments",
 };
 
 postRouter.post(
@@ -68,6 +69,13 @@ postRouter.post(
   authenticate,
   validate(reactToPostSchema),
   postServices.reactToPost
+);
+
+postRouter.use(
+  routes.comments,
+  authenticate,
+  validate(postIdSchema),
+  commentRouter
 );
 
 export default postRouter;
