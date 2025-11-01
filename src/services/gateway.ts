@@ -8,7 +8,7 @@ export interface IAuthenticatedSocket extends Socket {
   user?: HydratedDocument<IUser>;
 }
 
-const connectedSockets = new Map<string, string[]>();
+export const connectedSockets = new Map<string, string[]>();
 
 const addSocket = (userId: string, socketId: string) => {
   const sockets = connectedSockets.get(userId) || [];
@@ -63,7 +63,7 @@ export const initializeSocket = (httpServer: any) => {
     if (!socket.user?._id) return;
     socket.emit("connected", { message: "Socket connection established" });
 
-    chatGateway.register(socket);
+    chatGateway.sendMessage(socket);
 
     const userId = socket.user._id.toString();
     addSocket(userId, socket.id);

@@ -5,9 +5,9 @@ export class ChatEvents {
   private chatSocketServices = new ChatSocketServices();
   constructor() {}
 
-  sayHi = (socket: IAuthenticatedSocket) => {
-    socket.on("sayHi", (message: string, cb: Function) => {
-      return this.chatSocketServices.sayHi(message, cb);
+  sendMessage = async (socket: IAuthenticatedSocket) => {
+    socket.on("sendMessage", (data) => {
+      return this.chatSocketServices.sendMessage(socket, data);
     });
   };
 }

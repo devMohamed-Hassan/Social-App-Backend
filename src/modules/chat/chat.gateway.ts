@@ -5,7 +5,7 @@ export class ChatGateway {
   private chatEvents = new ChatEvents();
   constructor() {}
 
-  register = (socket: IAuthenticatedSocket) => {
-    this.chatEvents.sayHi(socket);
+  sendMessage = (socket: IAuthenticatedSocket) => {
+    this.chatEvents.sendMessage(socket);
   };
 }
