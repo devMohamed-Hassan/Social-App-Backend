@@ -12,44 +12,37 @@ export class ChatSocketServices {
 
   sendMessage = async (
     socket: IAuthenticatedSocket,
-    data: { sendTo: string; content: string }
+    data: { chatId: string; content: string }
   ) => {
     try {
       const senderId = socket.user?._id as string;
+      const { chatId, content } = data;
 
-      if (!data.sendTo || !data.content?.trim()) {
-        throw new AppError("Receiver ID and message content are required", 400);
+      if (!chatId || !content?.trim()) {
+        throw new AppError("Chat ID and message content are required", 400);
       }
 
-      const receiver = await this.userRepo.findById(data.sendTo);
-      if (!receiver) throw new AppError("Receiver not found", 404);
-
-      let chat = await this.chatRepo.findPrivateConversation(
-        senderId,
-        receiver.id
-      );
-      if (!chat) {
-        chat = await this.chatRepo.createPrivateConversation(
-          senderId,
-          receiver.id
-        );
-      }
+      const chat = await this.chatRepo.findOne({
+        _id: chatId,
+        participants: { $in: [senderId] },
+      });
+      if (!chat) throw new AppError("Chat not found or access denied", 404);
 
       const message = await MessageModel.create({
         conversation: chat._id,
         sender: senderId,
-        content: data.content,
+        content,
         seenBy: [senderId],
       });
 
-      if (!(chat as any).messages) (chat as any).messages = [];
-      (chat as any).messages.push(message._id);
-      chat.lastMessage = message._id;
-      await chat.save();
+      await this.chatRepo.update(chatId, {
+        $push: { messages: message._id },
+        $set: { lastMessage: message._id, updatedAt: new Date() },
+      });
 
       const populatedMessage = await message.populate(
         "sender",
-        "firstName lastName profileImage _id"
+        "_id firstName lastName profileImage"
       );
 
       socket.emit("messageSent", {
@@ -57,18 +50,13 @@ export class ChatSocketServices {
         chatId: chat._id,
       });
 
-      const receiverSockets = connectedSockets.get(receiver.id.toString());
-      if (receiverSockets?.length) {
-        receiverSockets.forEach((sockId) => {
-          socket.to(sockId).emit("newMessage", {
-            message: populatedMessage,
-            chatId: chat._id,
-          });
-        });
-      }
+      socket.to(chatId).emit("newMessage", {
+        message: populatedMessage,
+        chatId: chat._id,
+      });
 
       console.log(
-        `Message sent from ${socket.user?.firstName} to ${receiver.firstName}`
+        `Message sent in chat ${chatId} by ${socket.user?.firstName}: ${content}`
       );
     } catch (error: any) {
       console.error("Error sending message:", error.message || error);
