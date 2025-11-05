@@ -256,5 +256,6 @@ The application implements a centralized error handling mechanism:
 - Async error catching with express middleware
 
 > **⚠️ Note:**  
-> This application was carefully developed to demonstrate a **modern social media platform backend** with full authentication and chat features.  
+> This application was carefully developed to demonstrate a **modern social media platform backend** with full authentication and chat features.
+>   
 > For **API access credentials (Bearer token)** and the **Postman collection**, please **contact the developer** at **mohamed.h.ismael@gmail.com**.
