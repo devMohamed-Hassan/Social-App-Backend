@@ -9,6 +9,7 @@ import {
   cancelFriendRequestSchema,
   getFriendsSchema,
   getPendingRequestsSchema,
+  unfriendSchema,
 } from "./friend.validation";
 
 const friendRouter = Router();
@@ -21,6 +22,7 @@ const routes = {
   rejectRequest: "/reject/:id",
   cancelRequest: "/cancel/:id",
   getPendingRequests: "/requests",
+  unfriend: "/unfriend/:id",
 };
 
 friendRouter.post(
@@ -63,6 +65,12 @@ friendRouter.get(
   authenticate,
   validate(getPendingRequestsSchema),
   friendService.getPendingRequests
+);
+friendRouter.delete(
+  routes.unfriend,
+  authenticate,
+  validate(unfriendSchema),
+  friendService.unfriend
 );
 
 export default friendRouter;

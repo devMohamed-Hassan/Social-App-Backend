@@ -62,14 +62,23 @@ export class FriendService implements IFriendServices {
 
     if (!toUser) throw new AppError("User not found", 404);
 
-    const isBlocked = await this.userRepository.isUserBlocked(toUserId, fromId.toString());
+    const isBlocked = await this.userRepository.isUserBlocked(
+      toUserId,
+      fromId.toString()
+    );
     if (isBlocked) {
       throw new AppError("You cannot send a friend request to this user", 403);
     }
 
-    const hasBlockedTarget = await this.userRepository.isUserBlocked(fromId.toString(), toUserId);
+    const hasBlockedTarget = await this.userRepository.isUserBlocked(
+      fromId.toString(),
+      toUserId
+    );
     if (hasBlockedTarget) {
-      throw new AppError("You cannot send a friend request to a user you have blocked", 403);
+      throw new AppError(
+        "You cannot send a friend request to a user you have blocked",
+        403
+      );
     }
 
     const toUserObjectId = toUser._id as Types.ObjectId;
@@ -133,10 +142,15 @@ export class FriendService implements IFriendServices {
 
     if (!toUser || !fromUser) throw new AppError("User not found", 404);
 
+    const isFromUserBlocked = await this.userRepository.isUserBlocked(
+      toId.toString(),
+      fromUserId
+    );
+    const isToUserBlocked = await this.userRepository.isUserBlocked(
+      fromUserId,
+      toId.toString()
+    );
 
-    const isFromUserBlocked = await this.userRepository.isUserBlocked(toId.toString(), fromUserId);
-    const isToUserBlocked = await this.userRepository.isUserBlocked(fromUserId, toId.toString());
-    
     if (isFromUserBlocked || isToUserBlocked) {
       throw new AppError("Cannot accept friend request due to blocking", 403);
     }
@@ -252,7 +266,7 @@ export class FriendService implements IFriendServices {
 
     const userId = req.user._id as Types.ObjectId;
     const { page = 1, limit = 10 } = req.query as any;
-    
+
     const pageNum = parseInt(page.toString(), 10);
     const limitNum = parseInt(limit.toString(), 10);
 
@@ -260,7 +274,7 @@ export class FriendService implements IFriendServices {
     if (!user) throw new AppError("User not found", 404);
 
     const friendIds = user.friends.map((id) => id.toString());
-    
+
     if (friendIds.length === 0) {
       return sendSuccess({
         res,
@@ -324,7 +338,7 @@ export class FriendService implements IFriendServices {
 
     const userId = req.user._id as Types.ObjectId;
     const { page = 1, limit = 10 } = req.query as any;
-    
+
     const pageNum = parseInt(page.toString(), 10);
     const limitNum = parseInt(limit.toString(), 10);
 
@@ -365,7 +379,7 @@ export class FriendService implements IFriendServices {
         const request = pendingRequests.find(
           (req) => req.from.toString() === (sender._id as any).toString()
         );
-        
+
         return {
           id: userData.id,
           firstName: userData.firstName,
@@ -389,6 +403,61 @@ export class FriendService implements IFriendServices {
           limit: limitNum,
           total: pendingRequests.length,
           pages: Math.ceil(pendingRequests.length / limitNum),
+        },
+      },
+    });
+  };
+
+  unfriend = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const userId = req.user?._id as Types.ObjectId;
+    const { id: friendId } = req.params;
+
+    if (!friendId) {
+      throw new AppError("Friend ID is required", 400);
+    }
+
+    if (!Types.ObjectId.isValid(friendId)) {
+      throw new AppError("Invalid friend ID", 400);
+    }
+
+    if (userId.toString() === friendId) {
+      throw new AppError("You cannot unfriend yourself", 400);
+    }
+
+    const friendUser = await this.userRepository.findById(friendId);
+    if (!friendUser) {
+      throw new AppError("User not found", 404);
+    }
+
+    const currentUser = await this.userRepository.findById(userId.toString());
+
+    const areFriends = currentUser?.friends.some(
+      (fid) => fid.toString() === friendId
+    );
+
+    if (!areFriends) {
+      throw new AppError("You are not friends with this user", 400);
+    }
+
+    await this.userRepository.removeFriendship(
+      userId.toString(),
+      friendId.toString()
+    );
+
+    return sendSuccess({
+      res,
+      statusCode: 200,
+      message: "Friend removed successfully",
+      data: {
+        unfriendedUser: {
+          id: friendUser._id,
+          firstName: friendUser.firstName,
+          lastName: friendUser.lastName,
+          email: friendUser.email,
         },
       },
     });
